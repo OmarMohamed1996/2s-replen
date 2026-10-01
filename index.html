@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2S Replenishment System</title>
+  <style>
+    :root {
+      --primary: #1e293b;
+      --accent: #2563eb;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: #1e293b; padding: 12px; }
+    header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--primary); color: #fff; border-radius: 12px; margin-bottom: 16px; }
+    header h1 { font-size: 1.1rem; }
+    .btn-sync { background: var(--accent); color: #fff; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+    .role-tabs { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 16px; padding-bottom: 4px; }
+    .tab-btn { flex: 1; min-width: 75px; padding: 10px 4px; background: #e2e8f0; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; text-align: center; }
+    .tab-btn.active { background: var(--accent); color: #fff; }
+    .task-card { background: var(--card-bg); padding: 14px; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-right: 5px solid var(--accent); }
+    .task-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .product-title { font-size: 1rem; font-weight: bold; }
+    .barcode { font-size: 0.8rem; color: #64748b; }
+    .task-details { display: flex; gap: 16px; font-size: 0.9rem; margin-bottom: 12px; }
+    .badge { background: #eff6ff; color: var(--accent); padding: 3px 8px; border-radius: 6px; font-weight: 600; }
+    .actions { display: flex; gap: 10px; }
+    .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-done { background: var(--success); color: #fff; }
+    .btn-skip { background: #fee2e2; color: var(--danger); }
+    .report-card { background: #fff; padding: 16px; border-radius: 12px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1 id="appTitle">تعويض المعروض (Replenishment)</h1>
+    <button class="btn-sync" onclick="syncSales()">🔄 سحب المبيعات</button>
+  </header>
+
+  <div class="role-tabs">
+    <button class="tab-btn active" onclick="switchSection('Women')">Women</button>
+    <button class="tab-btn" onclick="switchSection('Men')">Men</button>
+    <button class="tab-btn" onclick="switchSection('Kids')">Kids</button>
+    <button class="tab-btn" onclick="switchSection('Accessories')">Acc</button>
+    <button class="tab-btn" onclick="switchSection('Admin')">📊 الأدمن</button>
+  </div>
+
+  <div id="contentArea"></div>
+
+  <script>
+    const API_BASE = "http://127.0.0.1:5000/api"; // عدّل هذا الرابط بعد رفع السيرفر
+    let currentSection = "Women";
+
+    function switchSection(sec) {
+      currentSection = sec;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      loadData();
+    }
+
+    async function loadData() {
+      const container = document.getElementById('contentArea');
+      container.innerHTML = '<p style="text-align:center;">جاري التحميل...</p>';
+      
+      if (currentSection === "Admin") {
+        const res = await fetch(`${API_BASE}/report`);
+        const report = await res.json();
+        renderAdminReport(report);
+      } else {
+        const res = await fetch(`${API_BASE}/tasks?section=${currentSection}`);
+        const tasks = await res.json();
+        renderTasks(tasks.filter(t => t.status === 'pending'));
+      }
+    }
+
+    function renderTasks(tasks) {
+      const container = document.getElementById('contentArea');
+      if (!tasks.length) {
+        container.innerHTML = '<p style="text-align:center; padding: 20px; color:#64748b;">لا توجد أصناف معلقة لهذا القسم حالياً 👍</p>';
+        return;
+      }
+      container.innerHTML = tasks.map(t => `
+        <div class="task-card" id="card-${t.id}">
+          <div class="task-header">
+            <div>
+              <div class="product-title">${t.product_name}</div>
+              <div class="barcode">باركود: ${t.barcode}</div>
+            </div>
+            <span class="badge">الوقت: ${t.timestamp}</span>
+          </div>
+          <div class="task-details">
+            <div>المطلوب للفلور: <strong>${t.qty_needed}</strong></div>
+            <div>المتبقي بالمخزن: <strong>${t.stock_available}</strong></div>
+          </div>
+          <div class="actions">
+            <button class="btn-action btn-done" onclick="updateStatus('${t.id}', 'done')">✅ تم الإنزال</button>
+            <button class="btn-action btn-skip" onclick="updateStatus('${t.id}', 'skipped')">❌ غير متوفر</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function updateStatus(taskId, status) {
+      await fetch(`${API_BASE}/tasks/${taskId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      document.getElementById(`card-${taskId}`)?.remove();
+    }
+
+    function renderAdminReport(report) {
+      const container = document.getElementById('contentArea');
+      let html = '<h3 style="margin-bottom:12px;">📊 تقرير التعويض اليومي</h3>';
+      for (const [sec, data] of Object.entries(report)) {
+        html += `
+          <div class="report-card">
+            <h4>قسم: ${sec}</h4>
+            <p>إجمالي المطلوب: <strong>${data.total_requested}</strong></p>
+            <p style="color:var(--success);">تم الإنزال: <strong>${data.completed}</strong></p>
+            <p style="color:var(--danger);">غير متوفر / تخطي: <strong>${data.skipped}</strong></p>
+            <p style="color:#d97706;">قيد الانتظار: <strong>${data.pending}</strong></p>
+          </div>
+        `;
+      }
+      container.innerHTML = html;
+    }
+
+    async function syncSales() {
+      const res = await fetch(`${API_BASE}/sync-sales`, { method: 'POST' });
+      const data = await res.json();
+      alert(`تم التحديث بنجاح! الأصناف المطلوب تعويضها: ${data.count}`);
+      loadData();
+    }
+
+    // التحميل المبدئي
+    loadData();
+  </script>
+</body>
+</html>
