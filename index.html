@@ -9,11 +9,16 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
+  <!-- Firebase App & Firestore (v10 compat) for Live Multi-Device Sync -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
   <style>
     :root {
       --bg: #0b1120;
       --card-bg: #1e293b;
       --card-inner: #0f172a;
+      --table-th: #1e293b;
       --text: #f8fafc;
       --text-muted: #94a3b8;
       --border: #334155;
@@ -26,8 +31,32 @@
       --danger-hover: #b91c1c;
       --warning: #d97706;
       --gold: #f59e0b;
+      --badge-model-bg: #1e3a8a;
+      --badge-model-text: #93c5fd;
       --radius: 12px;
       --shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --card-inner: #f1f5f9;
+      --table-th: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #cbd5e1;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --accent: #0284c7;
+      --success: #16a34a;
+      --success-hover: #15803d;
+      --danger: #dc2626;
+      --danger-hover: #b91c1c;
+      --warning: #d97706;
+      --gold: #b45309;
+      --badge-model-bg: #dbeafe;
+      --badge-model-text: #1e40af;
+      --shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     }
 
     * {
@@ -47,7 +76,6 @@
       overflow-x: hidden;
     }
 
-    /* Header */
     header {
       background: var(--card-bg);
       border-bottom: 1px solid var(--border);
@@ -64,7 +92,7 @@
     .brand-title {
       font-size: 1.1rem;
       font-weight: 800;
-      color: #fff;
+      color: var(--text);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -111,7 +139,6 @@
     .btn-ghost:hover { background: #475569; }
     .btn-sm { padding: 5px 10px; font-size: 0.78rem; border-radius: 6px; }
 
-    /* Main Container */
     main {
       flex: 1;
       max-width: 1200px;
@@ -120,7 +147,25 @@
       padding: 16px;
     }
 
-    /* KPI Bar */
+    .sync-status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid var(--border);
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #94a3b8;
+    }
+    .status-dot.connected { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+    .status-dot.local { background: #eab308; }
+
     .kpi-strip {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -149,7 +194,6 @@
       color: var(--text);
     }
 
-    /* Navigation & Tabs */
     .nav-tabs {
       display: flex;
       gap: 8px;
@@ -177,7 +221,6 @@
       color: white;
     }
 
-    /* Search & Filter Bar */
     .filter-bar {
       display: flex;
       flex-wrap: wrap;
@@ -201,7 +244,6 @@
       border-color: var(--primary);
     }
 
-    /* Accordion Model Card */
     .model-card {
       background: var(--card-bg);
       border: 1px solid var(--border);
@@ -241,8 +283,8 @@
     }
 
     .model-badge {
-      background: #1e3a8a;
-      color: #93c5fd;
+      background: var(--badge-model-bg);
+      color: var(--badge-model-text);
       padding: 2px 8px;
       border-radius: 4px;
       font-size: 0.8rem;
@@ -277,7 +319,7 @@
     }
 
     .variant-table th {
-      background: #1e293b;
+      background: var(--table-th);
       padding: 10px;
       color: var(--text-muted);
       border-bottom: 1px solid var(--border);
@@ -286,7 +328,7 @@
 
     .variant-table td {
       padding: 10px;
-      border-bottom: 1px solid #1f2937;
+      border-bottom: 1px solid var(--border);
       vertical-align: middle;
     }
 
@@ -299,7 +341,6 @@
       font-size: 0.78rem;
     }
 
-    /* Modal Windows */
     .modal-overlay {
       position: fixed;
       top: 0;
@@ -323,6 +364,8 @@
       max-width: 520px;
       padding: 20px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      max-height: 90vh;
+      overflow-y: auto;
     }
 
     .form-group {
@@ -352,7 +395,6 @@
       border-color: var(--primary);
     }
 
-    /* Scanner Viewfinder */
     #scanner-container {
       width: 100%;
       max-width: 400px;
@@ -363,7 +405,6 @@
       background: #000;
     }
 
-    /* Table styling for Admin tabs */
     .admin-table {
       width: 100%;
       border-collapse: collapse;
@@ -377,13 +418,13 @@
     }
 
     .admin-table th {
-      background: #1e293b;
+      background: var(--table-th);
       color: var(--text-muted);
     }
 
     .admin-table tfoot {
       font-weight: 800;
-      background: #1e293b;
+      background: var(--table-th);
     }
 
     .toast {
@@ -408,6 +449,99 @@
       85% { opacity: 1; transform: translate(-50%, 0); }
       100% { opacity: 0; transform: translate(-50%, -20px); }
     }
+
+    /* Model Image Thumbnail & Lightbox */
+    .model-header-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 260px;
+    }
+
+    .model-thumb-container {
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--card-inner);
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .model-thumb-container:hover {
+      transform: scale(1.05);
+      border-color: var(--primary);
+    }
+
+    .model-thumb-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .model-thumb-placeholder {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+
+    .model-thumb-loading {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Lightbox Modal */
+    .lightbox-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(6px);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+
+    .lightbox-img {
+      max-width: 90vw;
+      max-height: 80vh;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      object-fit: contain;
+      background: #fff;
+    }
+
+    .lightbox-title {
+      color: #fff;
+      margin-top: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -417,8 +551,13 @@
     <div class="brand-title">
       <span>2S Homewear</span>
       <span class="brand-badge" id="badge-dept">جاري التحميل...</span>
+      <div class="sync-status-indicator" title="حالة الاتصال السحابي">
+        <span class="status-dot" id="sync-dot"></span>
+        <span id="sync-status-text">محلي</span>
+      </div>
     </div>
     <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" id="btn-theme-toggle" onclick="toggleTheme()" title="تبديل المظهر">☀️ وضع نهاري</button>
       <button class="btn btn-ghost btn-sm" id="btn-sync" onclick="pullCloudSync()">🔄 مزامنة</button>
       <button class="btn btn-primary btn-sm" onclick="openScanner()">📷 مسح باركود</button>
       <button class="btn btn-ghost btn-sm" onclick="openAuthModal()">👤 الحساب</button>
@@ -469,9 +608,7 @@
         </select>
       </div>
 
-      <div id="tasks-container">
-        <!-- Rendered dynamically -->
-      </div>
+      <div id="tasks-container"></div>
     </div>
 
     <!-- Admin Panel View -->
@@ -521,7 +658,7 @@
           <select id="velocity-status-filter" class="form-control" style="width:160px;" onchange="renderVelocityTable()">
             <option value="ALL">كل الحالات</option>
             <option value="FAST">🔥 الأكثر مبيعاً (Sell-Through ≥ 40%)</option>
-            <option value="SLOW">❄️ حركة بطيئة (&lt; 40%)</option>
+            <option value="SLOW">❄️️ حركة بطيئة (&lt; 40%)</option>
             <option value="DEAD">🛑 راكد (مخزون بدون مبيعات)</option>
           </select>
         </div>
@@ -561,7 +698,7 @@
         </div>
       </div>
 
-      <!-- Tab 4: Data Management & Sync Settings -->
+      <!-- Tab 4: Data Management & Firebase Sync Settings -->
       <div id="admin-tab-data" style="display:none;">
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
           <!-- Dual File Upload Box -->
@@ -578,14 +715,19 @@
             <button class="btn btn-primary" style="width:100%;" onclick="processUploadedSheets()">⚡ معالجة الشيتات وبدء التشغيل</button>
           </div>
 
-          <!-- Multi-Device Sync Box -->
+          <!-- Firebase Cloud Sync Box -->
           <div class="kpi-card" style="text-align: right;">
-            <h4 style="margin-bottom:12px; color:var(--gold);">📡 مزامنة هواتف الفرع</h4>
+            <h4 style="margin-bottom:12px; color:var(--gold);">🔥 مزامنة Firebase اللحظية (مشروع fir-transfers-ffef1)</h4>
             <div class="form-group">
-              <label>كود الفرع للمزامنة (Sync Code):</label>
+              <label>كود الفرع للمزامنة (Branch Code):</label>
               <input type="text" id="sync-branch-code" class="form-control" value="2S-MIVIDA">
             </div>
-            <button class="btn btn-warning" style="width:100%; margin-bottom:8px;" onclick="pushCloudSync()">📡 نشر وتحديث المهام لجميع هواتف الفرع الآن</button>
+            <div class="form-group">
+              <label>إعدادات Firebase Config (JSON):</label>
+              <textarea id="firebase-config-input" class="form-control" rows="3" style="font-family: monospace; font-size: 0.75rem;" placeholder='{"apiKey": "...", "authDomain": "...", "projectId": "..."}'></textarea>
+            </div>
+            <button class="btn btn-warning" style="width:100%; margin-bottom:8px;" onclick="saveAndInitFirebase()">💾 حفظ وربط Firebase</button>
+            <button class="btn btn-primary" style="width:100%; margin-bottom:8px;" onclick="pushCloudSync()">📡 نشر المهام لـ Firebase الآن</button>
             <div style="display:flex; gap:8px;">
               <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="exportSyncPackage()">📦 تصدير حزمة (.json)</button>
               <label class="btn btn-ghost btn-sm" style="flex:1; cursor:pointer;">
@@ -676,14 +818,38 @@
     </div>
   </div>
 
-  <!-- Core Application Script -->
   <script>
+    /* ==========================================================================
+       THEME CONTROLLER (LIGHT / DARK MODE)
+       ========================================================================== */
+    function initTheme() {
+      const savedTheme = localStorage.getItem("2s_theme") || "light";
+      applyTheme(savedTheme);
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem("2s_theme", theme);
+      const btn = document.getElementById("btn-theme-toggle");
+      if (btn) {
+        btn.innerHTML = (theme === "light") ? "🌙 وضع ليلي" : "☀️ وضع نهاري";
+      }
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute("data-theme") || "dark";
+      const next = (current === "light") ? "dark" : "light";
+      applyTheme(next);
+      showToast(next === "light" ? "☀️ تم تفعيل الوضع النهاري" : "🌙 تم تفعيل الوضع الليلي");
+    }
+
     /* ==========================================================================
        STORAGE & STATE MANAGER (IndexedDB)
        ========================================================================== */
     const DB_NAME = "2S_Homewear_DB";
     const DB_VERSION = 1;
     let dbInstance = null;
+    let firestoreDB = null;
 
     function initDB() {
       return new Promise((resolve, reject) => {
@@ -722,23 +888,115 @@
       });
     }
 
-    // App State
     let state = {
       currentUser: { dept: "Women", staffName: "", role: "staff", branch: "2S-MIVIDA" },
       activeFloorTab: "replenish",
-      tasks: [],          // Active variant tasks
-      seenCodes: {},      // First seen dates for New In
-      masterCatalog: {},  // Catalog extracted from Pivot
+      tasks: [],
+      seenCodes: {},
+      masterCatalog: {},
       pendingSkipTaskId: null
     };
 
     const DEFAULT_PINS = { Admin: "9999", Women: "1234", Men: "1234", Kids: "1234", Accessories: "1234" };
 
     /* ==========================================================================
+       FIREBASE REALTIME INITIALIZER
+       ========================================================================== */
+    const DEFAULT_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyCws1w0jwqX4IXLGpVakDtMRgQcuJs3y2U",
+      authDomain: "fir-transfers-ffef1.firebaseapp.com",
+      projectId: "fir-transfers-ffef1",
+      storageBucket: "fir-transfers-ffef1.firebasestorage.app",
+      messagingSenderId: "150082967206",
+      appId: "1:150082967206:web:efba49bd8d00a0cba6c667",
+      measurementId: "G-NW99X1M49B"
+    };
+
+    async function initFirebaseFromStorage() {
+      let savedConfig = await dbGet("firebase_config");
+      if (!savedConfig) {
+        savedConfig = DEFAULT_FIREBASE_CONFIG;
+        await dbSet("firebase_config", savedConfig);
+      }
+      
+      try {
+        const cfg = (typeof savedConfig === "string") ? JSON.parse(savedConfig) : savedConfig;
+        if (!firebase.apps.length) {
+          firebase.initializeApp(cfg);
+        }
+        firestoreDB = firebase.firestore();
+        setSyncStatus("connected", "Firebase متصل");
+        const cfgInput = document.getElementById("firebase-config-input");
+        if (cfgInput) cfgInput.value = JSON.stringify(cfg, null, 2);
+        setupRealtimeListener();
+      } catch (e) {
+        console.warn("Firebase config error:", e);
+        setSyncStatus("local", "محلي (فشل الاتصال بـ Firebase)");
+      }
+    }
+
+    function setSyncStatus(type, text) {
+      const dot = document.getElementById("sync-dot");
+      const label = document.getElementById("sync-status-text");
+      if (dot && label) {
+        dot.className = "status-dot " + (type === "connected" ? "connected" : "local");
+        label.innerText = text;
+      }
+    }
+
+    async function saveAndInitFirebase() {
+      const val = document.getElementById("firebase-config-input").value.trim();
+      if (!val) {
+        showToast("⚠️ يرجى لصق الـ Firebase Config أولاً");
+        return;
+      }
+      try {
+        const cfg = JSON.parse(val);
+        await dbSet("firebase_config", cfg);
+        if (firebase.apps.length) {
+          showToast("🔄 تم الحفظ، يرجى إعادة تحميل الصفحة لتفعيل الاتصال الجديد");
+        } else {
+          firebase.initializeApp(cfg);
+          firestoreDB = firebase.firestore();
+          setSyncStatus("connected", "Firebase متصل");
+          setupRealtimeListener();
+          showToast("✅ تم ربط Firebase بنجاح تام!");
+        }
+      } catch (err) {
+        showToast("❌ صيغة JSON غير صحيحة، تأكد من نسخ الكائن كاملاً");
+      }
+    }
+
+    function setupRealtimeListener() {
+      if (!firestoreDB) return;
+      const branch = state.currentUser.branch || "2S-MIVIDA";
+      
+      firestoreDB.collection("branch_tasks").doc(branch)
+        .onSnapshot((doc) => {
+          if (doc.exists) {
+            const data = doc.data();
+            if (data && data.tasks) {
+              state.tasks = data.tasks;
+              state.seenCodes = data.seenCodes || {};
+              dbSet("tasks", state.tasks);
+              dbSet("seen_codes", state.seenCodes);
+              renderFloorTasks();
+              renderKPIs();
+              setSyncStatus("connected", "Firebase نشط ومتزامن");
+            }
+          }
+        }, (error) => {
+          console.warn("Firestore realtime listen error:", error);
+        });
+    }
+
+    /* ==========================================================================
        INITIALIZATION & AUTHENTICATION
        ========================================================================== */
     window.addEventListener("DOMContentLoaded", async () => {
+      initTheme();
       await initDB();
+      await initModelImagesCache();
       const savedTasks = await dbGet("tasks");
       if (savedTasks) state.tasks = savedTasks;
 
@@ -752,7 +1010,8 @@
         document.getElementById("sync-branch-code").value = savedBranch;
       }
 
-      // Check if user session exists
+      await initFirebaseFromStorage();
+
       const savedUser = sessionStorage.getItem("2s_user");
       if (savedUser) {
         state.currentUser = JSON.parse(savedUser);
@@ -797,7 +1056,6 @@
       document.getElementById("auth-modal").style.display = "none";
       setupUserInterface();
 
-      // Silent pull sync on login
       pullCloudSync();
     }
 
@@ -857,7 +1115,7 @@
           color = parts[0].trim();
           size = parts[1] ? parts[1].trim() : "";
         } else {
-          color = ""; // Strictly no color if comma is absent!
+          color = "";
           size = inside.trim();
         }
       }
@@ -877,7 +1135,6 @@
       showToast("⏳ جاري تحليل الشيتات وتطبيق القواعد...");
 
       try {
-        // 1. Parse Pivot Sheet (Master Gatekeeper)
         const pivotBuffer = await pivotFile.arrayBuffer();
         const pivotWb = XLSX.read(pivotBuffer, { type: "array" });
         const pivotSheet = pivotWb.Sheets[pivotWb.SheetNames[0]];
@@ -927,7 +1184,6 @@
           }
         }
 
-        // 2. Parse Sales Sheet (Stock Movement)
         const salesBuffer = await salesFile.arrayBuffer();
         const salesWb = XLSX.read(salesBuffer, { type: "array" });
         const salesSheet = salesWb.Sheets[salesWb.SheetNames[0]];
@@ -941,9 +1197,8 @@
           if (netSold <= 0) continue;
 
           let modelNo = String(row["Model No"] || "").trim().replace(/\.0$/, "");
-          // Master Gatekeeper check
           if (!pivotModels.has(modelNo)) {
-            continue; // Ignore models not in pivot inventory
+            continue;
           }
 
           const variantCode = String(row["Variant Code"] || "").trim();
@@ -951,7 +1206,6 @@
           const prodName = String(row["Product Name"] || "").trim();
           const currentStock = (row["Current Stock"] !== undefined) ? (parseFloat(row["Current Stock"]) || 0) : null;
 
-          // Lookup in Pivot
           let pivotMatch = pivotVariants[variantCode] || pivotVariants[`${modelNo}_${size}_`];
           let dept = pivotMatch ? pivotMatch.dept : mapDepartmentHierarchy(prodName);
           let color = pivotMatch ? pivotMatch.color : "";
@@ -994,13 +1248,150 @@
 
         await dbSet("tasks", state.tasks);
         await dbSet("seen_codes", state.seenCodes);
-        showToast(`✅ اكتملت المعالجة بنجاح! تم تجهيز وتحديث المهام`);
+        showToast(`✅ اكتملت المعالجة بنجاح! تم تجهيز المهام`);
         renderFloorTasks();
         renderKPIs();
+        
+        if (firestoreDB) pushCloudSync();
       } catch (err) {
         console.error(err);
         showToast("❌ حدث خطأ أثناء قراءة الملفات!");
       }
+    }
+
+    /* ==========================================================================
+       INTELLIGENT MODEL IMAGE FETCHER & LIGHTBOX (2SEGYPT.COM AUTO-SCRAPE)
+       ========================================================================== */
+    state.modelImages = {}; // Memory cache: { [modelNo]: imageUrl }
+
+    function escapeJs(str) {
+      return String(str || "").replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    async function initModelImagesCache() {
+      const cached = await dbGet("model_images");
+      if (cached) {
+        state.modelImages = cached;
+      }
+    }
+
+    function loadVisibleModelImages(modelList) {
+      modelList.forEach(group => {
+        loadSingleModelImage(group.modelNo);
+      });
+    }
+
+    async function loadSingleModelImage(modelNo) {
+      if (!modelNo) return;
+      const imgEl = document.getElementById(`thumb-img-${modelNo}`);
+      const placeholder = document.getElementById(`placeholder-${modelNo}`);
+      if (!imgEl) return;
+
+      if (state.modelImages[modelNo]) {
+        const url = state.modelImages[modelNo];
+        if (url === "NOT_FOUND") {
+          onThumbError(modelNo);
+        } else {
+          imgEl.src = url;
+        }
+        return;
+      }
+
+      try {
+        const searchApiUrl = `https://www.2segypt.com/search/suggest.json?q=${encodeURIComponent(modelNo)}&resources[type]=product`;
+        let foundImg = null;
+
+        try {
+          const res = await fetch(searchApiUrl, { method: "GET" });
+          if (res.ok) {
+            const data = await res.json();
+            const products = data?.resources?.results?.products || [];
+            if (products.length > 0 && products[0].image) {
+              foundImg = products[0].image;
+            }
+          }
+        } catch (e) {}
+
+        if (!foundImg) {
+          try {
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(searchApiUrl)}`;
+            const res = await fetch(proxyUrl);
+            if (res.ok) {
+              const data = await res.json();
+              const products = data?.resources?.results?.products || [];
+              if (products.length > 0 && products[0].image) {
+                foundImg = products[0].image;
+              }
+            }
+          } catch (e) {
+            console.warn("Proxy search fallback error:", e);
+          }
+        }
+
+        if (!foundImg) {
+          try {
+            const pageUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.2segypt.com/search?q=${modelNo}`)}`;
+            const htmlRes = await fetch(pageUrl);
+            if (htmlRes.ok) {
+              const htmlText = await htmlRes.text();
+              const match = htmlText.match(/https:\/\/cdn\.shopify\.com\/s\/files\/[^"'>\s]+(?:\.(?:jpg|jpeg|png|webp))/i);
+              if (match) {
+                foundImg = match[0];
+              }
+            }
+          } catch (e) {}
+        }
+
+        if (foundImg) {
+          if (foundImg.startsWith("//")) foundImg = "https:" + foundImg;
+          state.modelImages[modelNo] = foundImg;
+          await dbSet("model_images", state.modelImages);
+          imgEl.src = foundImg;
+        } else {
+          state.modelImages[modelNo] = "NOT_FOUND";
+          await dbSet("model_images", state.modelImages);
+          onThumbError(modelNo);
+        }
+      } catch (err) {
+        onThumbError(modelNo);
+      }
+    }
+
+    function onThumbLoad(modelNo) {
+      const imgEl = document.getElementById(`thumb-img-${modelNo}`);
+      const placeholder = document.getElementById(`placeholder-${modelNo}`);
+      if (imgEl && placeholder) {
+        placeholder.style.display = "none";
+        imgEl.style.display = "block";
+      }
+    }
+
+    function onThumbError(modelNo) {
+      const placeholder = document.getElementById(`placeholder-${modelNo}`);
+      if (placeholder) {
+        placeholder.innerHTML = `<span style="font-size:1.1rem;">👕</span><span style="font-size:0.6rem; color:var(--text-muted);">#${modelNo}</span>`;
+      }
+    }
+
+    function openLightbox(modelNo, prodName) {
+      const url = state.modelImages[modelNo];
+      if (!url || url === "NOT_FOUND") {
+        window.open(`https://www.2segypt.com/search?q=${modelNo}`, "_blank");
+        return;
+      }
+      const modal = document.getElementById("lightbox-modal");
+      const img = document.getElementById("lightbox-img");
+      const title = document.getElementById("lightbox-title");
+      if (modal && img && title) {
+        img.src = url;
+        title.innerText = `#${modelNo} - ${prodName}`;
+        modal.style.display = "flex";
+      }
+    }
+
+    function closeLightbox() {
+      const modal = document.getElementById("lightbox-modal");
+      if (modal) modal.style.display = "none";
     }
 
     /* ==========================================================================
@@ -1012,7 +1403,6 @@
       const sortVal = document.getElementById("sort-select").value;
       const { dept, role } = state.currentUser;
 
-      // Filter tasks by Dept and Tab
       let list = state.tasks.filter(t => {
         if (role !== "admin" && t.dept !== dept) return false;
         if (state.activeFloorTab === "newin" && !t.isNewIn) return false;
@@ -1020,7 +1410,6 @@
         return true;
       });
 
-      // Search filter
       if (searchVal) {
         list = list.filter(t => 
           t.modelNo.toLowerCase().includes(searchVal) ||
@@ -1031,7 +1420,6 @@
         );
       }
 
-      // Group by Model Key: ${modelNo}_${prodName.trim()}
       const groups = {};
       list.forEach(item => {
         const key = `${item.modelNo}_${item.prodName.trim()}`;
@@ -1048,7 +1436,6 @@
 
       let groupArray = Object.values(groups);
 
-      // Sorting
       groupArray.sort((a, b) => {
         if (sortVal === "qty-desc") {
           const sumA = a.variants.reduce((s, v) => s + (v.qtyNeeded || 0), 0);
@@ -1074,15 +1461,24 @@
         html += `
           <div class="model-card">
             <div class="model-header">
-              <div class="model-info">
-                <div class="model-title-wrap">
-                  <span class="model-name">${group.prodName}</span>
-                  <span class="model-badge">#${group.modelNo}</span>
-                  ${group.isNewIn ? '<span class="badge-newin">🌟 New In</span>' : ''}
+              <div class="model-header-main">
+                <div class="model-thumb-container" id="thumb-container-${group.modelNo}" onclick="openLightbox('${group.modelNo}', '${escapeJs(group.prodName)}')" title="انقر لتكبير صورة الموديل">
+                  <div class="model-thumb-placeholder" id="placeholder-${group.modelNo}">
+                    <div class="model-thumb-loading"></div>
+                    <span>صورة</span>
+                  </div>
+                  <img src="" id="thumb-img-${group.modelNo}" class="model-thumb-img" alt="${group.prodName}" onload="onThumbLoad('${group.modelNo}')" onerror="onThumbError('${group.modelNo}')">
                 </div>
-                <a href="${onlineSearchUrl}" target="_blank" class="model-link" onclick="event.stopPropagation();">
-                  🔗 عرض الصنف على موقع 2S أونلاين
-                </a>
+                <div class="model-info">
+                  <div class="model-title-wrap">
+                    <span class="model-name">${group.prodName}</span>
+                    <span class="model-badge">#${group.modelNo}</span>
+                    ${group.isNewIn ? '<span class="badge-newin">🌟 New In</span>' : ''}
+                  </div>
+                  <a href="${onlineSearchUrl}" target="_blank" class="model-link" onclick="event.stopPropagation();">
+                    🔗 عرض على موقع 2S
+                  </a>
+                </div>
               </div>
               <div>
                 ${hasPending ? `<button class="btn btn-success btn-sm" onclick="completeEntireModel('${group.modelNo}')">✅ إنزال الموديل بالكامل</button>` : '<span style="color:#4ade80; font-size:0.85rem; font-weight:700;">✅ مكتمل بالكامل</span>'}
@@ -1125,6 +1521,7 @@
       });
 
       container.innerHTML = html;
+      loadVisibleModelImages(groupArray);
     }
 
     /* ==========================================================================
@@ -1149,6 +1546,7 @@
       renderFloorTasks();
       renderKPIs();
       showToast("✅ تم تسجيل إنزال الصنف بنجاح");
+      if (firestoreDB) pushCloudSync();
     }
 
     async function completeEntireModel(modelNo) {
@@ -1169,6 +1567,7 @@
       renderFloorTasks();
       renderKPIs();
       showToast(`✅ تم إنزال جميع مقاسات الموديل #${modelNo}`);
+      if (firestoreDB) pushCloudSync();
     }
 
     function openSkipModal(taskId) {
@@ -1204,6 +1603,7 @@
       renderFloorTasks();
       renderKPIs();
       showToast("❌ تم تسجيل سبب التخطي لحفظ النواقص");
+      if (firestoreDB) pushCloudSync();
     }
 
     /* ==========================================================================
@@ -1336,7 +1736,6 @@
       const statusFilter = document.getElementById("velocity-status-filter").value;
       const tbody = document.getElementById("velocity-tbody");
 
-      // Aggregate strictly by Key = Model_No + "_" + Product_Name.trim()
       const modelsMap = {};
       state.tasks.forEach(t => {
         const key = `${t.modelNo}_${t.prodName.trim()}`;
@@ -1450,40 +1849,29 @@
     }
 
     /* ==========================================================================
-       MULTI-DEVICE CLOUD SYNC & EXPORTS
+       FIREBASE / MULTI-DEVICE CLOUD SYNC & EXPORTS
        ========================================================================== */
     async function pushCloudSync() {
       const branch = document.getElementById("sync-branch-code").value.trim() || state.currentUser.branch;
       showToast("📡 جاري نشر وتحديث المهام للسحابة...");
 
-      try {
-        const payload = {
-          branch: branch,
-          updatedAt: new Date().toISOString(),
-          tasks: state.tasks,
-          seenCodes: state.seenCodes
-        };
+      const payload = {
+        branch: branch,
+        updatedAt: new Date().toISOString(),
+        tasks: state.tasks,
+        seenCodes: state.seenCodes
+      };
 
-        const res = await fetch(`https://jsonblob.com/api/jsonBlob/${encodeURIComponent(branch)}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-          showToast("✅ تم نشر المهام بنجاح! يمكن لجميع الهواتف المزامنة الآن");
-        } else {
-          // Fallback create
-          await fetch(`https://jsonblob.com/api/jsonBlob`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-Request-Id": branch },
-            body: JSON.stringify(payload)
-          });
-          showToast("✅ تم إنشاء غرفة المزامنة ونشر المهام!");
+      if (firestoreDB) {
+        try {
+          await firestoreDB.collection("branch_tasks").doc(branch).set(payload);
+          setSyncStatus("connected", "Firebase متزامن لحظياً");
+          showToast("✅ تم نشر وتحديث المهام عبر Firebase بنجاح تام!");
+          return;
+        } catch (err) {
+          console.error("Firebase write error:", err);
+          showToast("⚠️ تعذر النشر على Firebase، يرجى التحقق من أذونات Firestore Rules");
         }
-      } catch (err) {
-        console.error(err);
-        showToast("⚠️ فشل الاتصال بالسحابة! يرجى استخدام تصدير الحزمة يدوياً");
       }
     }
 
@@ -1491,25 +1879,29 @@
       const branch = state.currentUser.branch || "2S-MIVIDA";
       showToast("🔄 جاري مزامنة المهام...");
 
-      try {
-        const res = await fetch(`https://jsonblob.com/api/jsonBlob/${encodeURIComponent(branch)}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.tasks) {
-            state.tasks = data.tasks;
-            state.seenCodes = data.seenCodes || {};
-            await dbSet("tasks", state.tasks);
-            await dbSet("seen_codes", state.seenCodes);
-            renderFloorTasks();
-            renderKPIs();
-            showToast("✅ تمت المزامنة وتحديث البيانات بنجاح!");
+      if (firestoreDB) {
+        try {
+          const doc = await firestoreDB.collection("branch_tasks").doc(branch).get();
+          if (doc.exists) {
+            const data = doc.data();
+            if (data && data.tasks) {
+              state.tasks = data.tasks;
+              state.seenCodes = data.seenCodes || {};
+              await dbSet("tasks", state.tasks);
+              await dbSet("seen_codes", state.seenCodes);
+              renderFloorTasks();
+              renderKPIs();
+              setSyncStatus("connected", "Firebase متصل");
+              showToast("✅ تمت المزامنة عبر Firebase بنجاح!");
+              return;
+            }
           }
-        } else {
-          showToast("ℹ️ لا توجد بيانات جديدة بالسحابة");
+        } catch (err) {
+          console.warn("Firebase pull error:", err);
         }
-      } catch (err) {
-        console.warn("Pull sync fallback:", err);
       }
+
+      showToast("ℹ️ البيانات مسجلة ومحدثة محلياً");
     }
 
     function exportSyncPackage() {
@@ -1682,5 +2074,13 @@
       setTimeout(() => toast.remove(), 3000);
     }
   </script>
+
+  <!-- Image Lightbox Modal -->
+  <div class="lightbox-overlay" id="lightbox-modal" style="display:none;" onclick="closeLightbox()">
+    <img src="" id="lightbox-img" class="lightbox-img" alt="صورة الموديل">
+    <div class="lightbox-title" id="lightbox-title"></div>
+    <button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="closeLightbox()">✕ إغلاق المعاينة</button>
+  </div>
+
 </body>
 </html>
