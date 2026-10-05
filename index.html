@@ -561,6 +561,7 @@
       <button class="btn btn-ghost btn-sm" id="btn-sync" onclick="pullCloudSync()">🔄 مزامنة</button>
       <button class="btn btn-primary btn-sm" onclick="openScanner()">📷 مسح باركود</button>
       <button class="btn btn-ghost btn-sm" onclick="openAuthModal()">👤 الحساب</button>
+      <button class="btn btn-danger btn-sm" id="btn-logout" onclick="logoutStaff()" title="تسجيل الخروج وإنهاء الشفت">🚪 خروج</button>
     </div>
   </header>
 
@@ -658,7 +659,7 @@
           <select id="velocity-status-filter" class="form-control" style="width:160px;" onchange="renderVelocityTable()">
             <option value="ALL">كل الحالات</option>
             <option value="FAST">🔥 الأكثر مبيعاً (Sell-Through ≥ 40%)</option>
-            <option value="SLOW">❄️️ حركة بطيئة (&lt; 40%)</option>
+            <option value="SLOW">❄️ حركة بطيئة (&lt; 40%)</option>
             <option value="DEAD">🛑 راكد (مخزون بدون مبيعات)</option>
           </select>
         </div>
@@ -775,7 +776,8 @@
         <label>الرقم السري (PIN):</label>
         <input type="password" id="auth-pin" class="form-control" placeholder="****">
       </div>
-      <button class="btn btn-primary" style="width:100%;" onclick="submitAuth()">دخول النظام</button>
+      <button class="btn btn-primary" style="width:100%; margin-bottom:8px;" onclick="submitAuth()">دخول النظام</button>
+      <button class="btn btn-ghost btn-sm" id="modal-logout-btn" style="width:100%; color:var(--danger); display:none;" onclick="logoutStaff()">🚪 تسجيل الخروج من هذا الجهاز</button>
     </div>
   </div>
 
@@ -900,6 +902,24 @@
     const DEFAULT_PINS = { Admin: "9999", Women: "1234", Men: "1234", Kids: "1234", Accessories: "1234" };
 
     /* ==========================================================================
+       STAFF LOGOUT & SESSION RESET
+       ========================================================================== */
+    function logoutStaff() {
+      if (!confirm("هل أنت متأكد من تسجيل الخروج وإنهاء شفتك على هذا الهاتف؟")) return;
+      sessionStorage.removeItem("2s_user");
+      sessionStorage.removeItem("shift_start_time");
+      state.currentUser = { dept: "Women", staffName: "", role: "staff", branch: state.currentUser?.branch || "2S-MIVIDA" };
+      document.getElementById("badge-dept").innerText = "تم تسجيل الخروج";
+      document.getElementById("auth-staff-name").value = "";
+      document.getElementById("auth-pin").value = "";
+      document.getElementById("modal-logout-btn").style.display = "none";
+      document.getElementById("auth-modal").style.display = "flex";
+      renderFloorTasks();
+      renderKPIs();
+      showToast("👋 تم تسجيل الخروج بنجاح. جاهز لدخول موظف جديد بعداد مستقل");
+    }
+
+    /* ==========================================================================
        FIREBASE REALTIME INITIALIZER
        ========================================================================== */
     const DEFAULT_FIREBASE_CONFIG = {
@@ -1016,6 +1036,7 @@
       if (savedUser) {
         state.currentUser = JSON.parse(savedUser);
         document.getElementById("auth-modal").style.display = "none";
+        document.getElementById("modal-logout-btn").style.display = "block";
         setupUserInterface();
       }
     });
@@ -1050,10 +1071,14 @@
         role: (dept === "Admin") ? "admin" : "staff"
       };
 
+      const nowIso = new Date().toISOString();
       sessionStorage.setItem("2s_user", JSON.stringify(state.currentUser));
+      sessionStorage.setItem("shift_start_time", nowIso);
+      state.currentUser.loginTime = nowIso;
       await dbSet("branch_code", branch);
 
       document.getElementById("auth-modal").style.display = "none";
+      document.getElementById("modal-logout-btn").style.display = "block";
       setupUserInterface();
 
       pullCloudSync();
@@ -1262,7 +1287,7 @@
     /* ==========================================================================
        INTELLIGENT MODEL IMAGE FETCHER & LIGHTBOX (2SEGYPT.COM AUTO-SCRAPE)
        ========================================================================== */
-    state.modelImages = {}; // Memory cache: { [modelNo]: imageUrl }
+    state.modelImages = {};
 
     function escapeJs(str) {
       return String(str || "").replace(/'/g, "\\'").replace(/"/g, '&quot;');
@@ -1287,14 +1312,18 @@
       const placeholder = document.getElementById(`placeholder-${modelNo}`);
       if (!imgEl) return;
 
+      // Clean invalid cached images (like google pay icons)
       if (state.modelImages[modelNo]) {
         const url = state.modelImages[modelNo];
-        if (url === "NOT_FOUND") {
+        if (url && (url.toLowerCase().includes("google") || url.toLowerCase().includes("pay") || url.toLowerCase().includes("logo") || url.toLowerCase().includes("badge"))) {
+          delete state.modelImages[modelNo];
+        } else if (url === "NOT_FOUND") {
           onThumbError(modelNo);
+          return;
         } else {
           imgEl.src = url;
+          return;
         }
-        return;
       }
 
       try {
@@ -1306,8 +1335,11 @@
           if (res.ok) {
             const data = await res.json();
             const products = data?.resources?.results?.products || [];
-            if (products.length > 0 && products[0].image) {
-              foundImg = products[0].image;
+            if (products.length > 0) {
+              const p = products.find(item => item.image && !item.image.toLowerCase().includes("google") && !item.image.toLowerCase().includes("logo")) || products[0];
+              if (p && p.image && !p.image.toLowerCase().includes("google") && !p.image.toLowerCase().includes("pay")) {
+                foundImg = p.image;
+              }
             }
           }
         } catch (e) {}
@@ -1319,8 +1351,11 @@
             if (res.ok) {
               const data = await res.json();
               const products = data?.resources?.results?.products || [];
-              if (products.length > 0 && products[0].image) {
-                foundImg = products[0].image;
+              if (products.length > 0) {
+                const p = products.find(item => item.image && !item.image.toLowerCase().includes("google") && !item.image.toLowerCase().includes("logo")) || products[0];
+                if (p && p.image && !p.image.toLowerCase().includes("google") && !p.image.toLowerCase().includes("pay")) {
+                  foundImg = p.image;
+                }
               }
             }
           } catch (e) {
@@ -1334,9 +1369,10 @@
             const htmlRes = await fetch(pageUrl);
             if (htmlRes.ok) {
               const htmlText = await htmlRes.text();
-              const match = htmlText.match(/https:\/\/cdn\.shopify\.com\/s\/files\/[^"'>\s]+(?:\.(?:jpg|jpeg|png|webp))/i);
-              if (match) {
-                foundImg = match[0];
+              // Strictly match ONLY product images from Shopify CDN (contains /products/)
+              const matches = htmlText.match(/https:\/\/cdn\.shopify\.com\/s\/files\/[^"'>\s]*\/products\/[^"'>\s]+(?:\.(?:jpg|jpeg|png|webp))/gi);
+              if (matches && matches.length > 0) {
+                foundImg = matches.find(m => !m.toLowerCase().includes("logo") && !m.toLowerCase().includes("icon") && !m.toLowerCase().includes("pay") && !m.toLowerCase().includes("google"));
               }
             }
           } catch (e) {}
@@ -1532,8 +1568,9 @@
       if (!task) return;
 
       const now = new Date();
-      const created = new Date(task.createdAt);
-      const slaMinutes = Math.max(1, Math.round((now - created) / 60000));
+      const shiftStart = new Date(sessionStorage.getItem("shift_start_time") || now.toISOString());
+      // SLA measures active elapsed time from shift login up to completion
+      const slaMinutes = Math.max(1, Math.round((now - shiftStart) / 60000));
 
       task.completedQty = (task.completedQty || 0) + task.qtyNeeded;
       task.qtyNeeded = 0;
@@ -1551,14 +1588,15 @@
 
     async function completeEntireModel(modelNo) {
       const now = new Date();
+      const shiftStart = new Date(sessionStorage.getItem("shift_start_time") || now.toISOString());
+      const batchSla = Math.max(1, Math.round((now - shiftStart) / 60000));
       state.tasks.forEach(t => {
         if (t.modelNo === modelNo && t.status === "pending") {
-          const created = new Date(t.createdAt);
           t.completedQty = (t.completedQty || 0) + t.qtyNeeded;
           t.qtyNeeded = 0;
           t.status = "done";
           t.resolvedAt = now.toISOString();
-          t.slaMinutes = Math.max(1, Math.round((now - created) / 60000));
+          t.slaMinutes = batchSla;
           t.staffName = state.currentUser.staffName;
         }
       });
@@ -1589,13 +1627,13 @@
       const notes = document.getElementById("skip-notes").value.trim();
 
       const now = new Date();
-      const created = new Date(task.createdAt);
+      const shiftStart = new Date(sessionStorage.getItem("shift_start_time") || now.toISOString());
 
       task.status = "skipped";
       task.skipReason = reason;
       task.skipNotes = notes;
       task.resolvedAt = now.toISOString();
-      task.slaMinutes = Math.max(1, Math.round((now - created) / 60000));
+      task.slaMinutes = Math.max(1, Math.round((now - shiftStart) / 60000));
       task.staffName = state.currentUser.staffName;
 
       await dbSet("tasks", state.tasks);
