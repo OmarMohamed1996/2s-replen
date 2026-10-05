@@ -1236,38 +1236,56 @@
           let color = pivotMatch ? pivotMatch.color : "";
           let stock = (currentStock !== null) ? currentStock : (pivotMatch ? pivotMatch.stock : 0);
 
+          // شرط منطق التعويض الصارم: لا يتم طلب إنزال إذا كان المخزون المتاح صفر أو أقل
+          if (stock <= 0) {
+            const taskKey = `${modelNo}_${size}_${color}`;
+            let existingTask = state.tasks.find(t => t.id === taskKey);
+            if (existingTask) {
+              existingTask.stock = 0;
+              existingTask.qtyNeeded = 0;
+            }
+            continue;
+          }
+
           const taskKey = `${modelNo}_${size}_${color}`;
           let existingTask = state.tasks.find(t => t.id === taskKey);
 
           if (existingTask) {
             const completedQty = existingTask.completedQty || 0;
             const deltaNeeded = Math.max(0, netSold - completedQty);
-            if (deltaNeeded > 0) {
-              existingTask.qtyNeeded = deltaNeeded;
-              existingTask.netSold = netSold;
-              existingTask.stock = stock;
+            const actualReplenish = Math.min(deltaNeeded, stock);
+            existingTask.netSold = netSold;
+            existingTask.stock = stock;
+
+            if (actualReplenish > 0) {
+              existingTask.qtyNeeded = actualReplenish;
               existingTask.status = "pending";
               addedCount++;
+            } else {
+              existingTask.qtyNeeded = 0;
             }
           } else {
-            state.tasks.push({
-              id: taskKey,
-              modelNo: modelNo,
-              prodName: prodName || (pivotMatch ? pivotMatch.prodName : "Unknown"),
-              size: size,
-              color: color,
-              barcode: variantCode || (pivotMatch ? pivotMatch.barcode : ""),
-              dept: dept,
-              qtyNeeded: netSold,
-              netSold: netSold,
-              completedQty: 0,
-              stock: stock,
-              status: "pending",
-              createdAt: now,
-              isNewIn: !state.seenCodes[modelNo]
-            });
-            state.seenCodes[modelNo] = now;
-            addedCount++;
+            const actualReplenish = Math.min(netSold, stock);
+            if (actualReplenish > 0) {
+              state.tasks.push({
+                id: taskKey,
+                modelNo: modelNo,
+                prodName: prodName || (pivotMatch ? pivotMatch.prodName : "Unknown"),
+                size: size,
+                color: color,
+                barcode: variantCode || (pivotMatch ? pivotMatch.barcode : ""),
+                dept: dept,
+                qtyNeeded: actualReplenish,
+                netSold: netSold,
+                completedQty: 0,
+                stock: stock,
+                status: "pending",
+                createdAt: now,
+                isNewIn: !state.seenCodes[modelNo]
+              });
+              state.seenCodes[modelNo] = now;
+              addedCount++;
+            }
           }
         }
 
@@ -1369,7 +1387,6 @@
             const htmlRes = await fetch(pageUrl);
             if (htmlRes.ok) {
               const htmlText = await htmlRes.text();
-              // Strictly match ONLY product images from Shopify CDN (contains /products/)
               const matches = htmlText.match(/https:\/\/cdn\.shopify\.com\/s\/files\/[^"'>\s]*\/products\/[^"'>\s]+(?:\.(?:jpg|jpeg|png|webp))/gi);
               if (matches && matches.length > 0) {
                 foundImg = matches.find(m => !m.toLowerCase().includes("logo") && !m.toLowerCase().includes("icon") && !m.toLowerCase().includes("pay") && !m.toLowerCase().includes("google"));
@@ -1442,7 +1459,7 @@
       let list = state.tasks.filter(t => {
         if (role !== "admin" && t.dept !== dept) return false;
         if (state.activeFloorTab === "newin" && !t.isNewIn) return false;
-        if (state.activeFloorTab === "replenish" && t.qtyNeeded <= 0 && t.status === "done") return false;
+        if (state.activeFloorTab === "replenish" && (t.qtyNeeded <= 0 || t.status === "done")) return false;
         return true;
       });
 
@@ -1569,7 +1586,6 @@
 
       const now = new Date();
       const shiftStart = new Date(sessionStorage.getItem("shift_start_time") || now.toISOString());
-      // SLA measures active elapsed time from shift login up to completion
       const slaMinutes = Math.max(1, Math.round((now - shiftStart) / 60000));
 
       task.completedQty = (task.completedQty || 0) + task.qtyNeeded;
