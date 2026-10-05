@@ -2,143 +2,1685 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>2S Replenishment System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>2S Homewear | Intelligent Floor Replenishment & Multi-Device Inventory Sync</title>
+  
+  <!-- CDNs for SheetJS and Html5Qrcode -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
   <style>
     :root {
-      --primary: #1e293b;
-      --accent: #2563eb;
+      --bg: #0b1120;
+      --card-bg: #1e293b;
+      --card-inner: #0f172a;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --accent: #38bdf8;
       --success: #16a34a;
+      --success-hover: #15803d;
       --danger: #dc2626;
-      --bg: #f8fafc;
-      --card-bg: #ffffff;
+      --danger-hover: #b91c1c;
+      --warning: #d97706;
+      --gold: #f59e0b;
+      --radius: 12px;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg); color: #1e293b; padding: 12px; }
-    header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--primary); color: #fff; border-radius: 12px; margin-bottom: 16px; }
-    header h1 { font-size: 1.1rem; }
-    .btn-sync { background: var(--accent); color: #fff; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
-    .role-tabs { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 16px; padding-bottom: 4px; }
-    .tab-btn { flex: 1; min-width: 75px; padding: 10px 4px; background: #e2e8f0; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; text-align: center; }
-    .tab-btn.active { background: var(--accent); color: #fff; }
-    .task-card { background: var(--card-bg); padding: 14px; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-right: 5px solid var(--accent); }
-    .task-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-    .product-title { font-size: 1rem; font-weight: bold; }
-    .barcode { font-size: 0.8rem; color: #64748b; }
-    .task-details { display: flex; gap: 16px; font-size: 0.9rem; margin-bottom: 12px; }
-    .badge { background: #eff6ff; color: var(--accent); padding: 3px 8px; border-radius: 6px; font-weight: 600; }
-    .actions { display: flex; gap: 10px; }
-    .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .btn-done { background: var(--success); color: #fff; }
-    .btn-skip { background: #fee2e2; color: var(--danger); }
-    .report-card { background: #fff; padding: 16px; border-radius: 12px; margin-bottom: 12px; }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Cairo", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Header */
+    header {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow);
+    }
+
+    .brand-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-badge {
+      background: var(--primary);
+      color: white;
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      color: white;
+    }
+
+    .btn-primary { background: var(--primary); }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-success { background: var(--success); }
+    .btn-success:hover { background: var(--success-hover); }
+    .btn-danger { background: var(--danger); }
+    .btn-danger:hover { background: var(--danger-hover); }
+    .btn-warning { background: var(--warning); }
+    .btn-ghost { background: var(--border); color: var(--text); }
+    .btn-ghost:hover { background: #475569; }
+    .btn-sm { padding: 5px 10px; font-size: 0.78rem; border-radius: 6px; }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 16px;
+    }
+
+    /* KPI Bar */
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .kpi-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+
+    .kpi-title {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .kpi-val {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    /* Navigation & Tabs */
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      overflow-x: auto;
+    }
+
+    .nav-tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+      padding: 8px 16px;
+      cursor: pointer;
+      border-radius: 8px;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .nav-tab-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* Search & Filter Bar */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 220px;
+      background: var(--card-inner);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 8px;
+      outline: none;
+      font-size: 0.9rem;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+    }
+
+    /* Accordion Model Card */
+    .model-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 14px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .model-header {
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.02);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .model-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .model-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .model-name {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .model-badge {
+      background: #1e3a8a;
+      color: #93c5fd;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-family: monospace;
+    }
+
+    .badge-newin {
+      background: rgba(217, 119, 6, 0.2);
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      font-size: 0.72rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    .model-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.78rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .variant-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: center;
+      background: var(--card-inner);
+    }
+
+    .variant-table th {
+      background: #1e293b;
+      padding: 10px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+    }
+
+    .variant-table td {
+      padding: 10px;
+      border-bottom: 1px solid #1f2937;
+      vertical-align: middle;
+    }
+
+    .color-chip {
+      background: #1d4ed8;
+      color: #eff6ff;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.78rem;
+    }
+
+    /* Modal Windows */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 520px;
+      padding: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--card-inner);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .form-control:focus {
+      border-color: var(--primary);
+    }
+
+    /* Scanner Viewfinder */
+    #scanner-container {
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px dashed var(--primary);
+      background: #000;
+    }
+
+    /* Table styling for Admin tabs */
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: right;
+    }
+
+    .admin-table th, .admin-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .admin-table th {
+      background: #1e293b;
+      color: var(--text-muted);
+    }
+
+    .admin-table tfoot {
+      font-weight: 800;
+      background: #1e293b;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      border: 1px solid var(--border);
+      padding: 10px 20px;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      box-shadow: var(--shadow);
+      z-index: 1000;
+      pointer-events: none;
+      animation: fadeInOut 3s forwards;
+    }
+
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translate(-50%, 20px); }
+      15% { opacity: 1; transform: translate(-50%, 0); }
+      85% { opacity: 1; transform: translate(-50%, 0); }
+      100% { opacity: 0; transform: translate(-50%, -20px); }
+    }
   </style>
 </head>
 <body>
 
+  <!-- App Header -->
   <header>
-    <h1 id="appTitle">تعويض المعروض (Replenishment)</h1>
-    <button class="btn-sync" onclick="syncSales()">🔄 سحب المبيعات</button>
+    <div class="brand-title">
+      <span>2S Homewear</span>
+      <span class="brand-badge" id="badge-dept">جاري التحميل...</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" id="btn-sync" onclick="pullCloudSync()">🔄 مزامنة</button>
+      <button class="btn btn-primary btn-sm" onclick="openScanner()">📷 مسح باركود</button>
+      <button class="btn btn-ghost btn-sm" onclick="openAuthModal()">👤 الحساب</button>
+    </div>
   </header>
 
-  <div class="role-tabs">
-    <button class="tab-btn active" onclick="switchSection('Women')">Women</button>
-    <button class="tab-btn" onclick="switchSection('Men')">Men</button>
-    <button class="tab-btn" onclick="switchSection('Kids')">Kids</button>
-    <button class="tab-btn" onclick="switchSection('Accessories')">Acc</button>
-    <button class="tab-btn" onclick="switchSection('Admin')">📊 الأدمن</button>
-  </div>
+  <!-- Main View -->
+  <main>
+    <!-- Live KPIs -->
+    <div class="kpi-strip">
+      <div class="kpi-card">
+        <div class="kpi-title">المطلوب رفعه</div>
+        <div class="kpi-val" id="kpi-req">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">تم الإنزال ✅</div>
+        <div class="kpi-val" style="color: #4ade80;" id="kpi-done">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">تخطي/نواقص ❌</div>
+        <div class="kpi-val" style="color: #f87171;" id="kpi-skip">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">قيد الانتظار ⏳</div>
+        <div class="kpi-val" style="color: #fbbf24;" id="kpi-pend">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">متوسط سرعة الإنجاز</div>
+        <div class="kpi-val" id="kpi-sla">0 دقيقة</div>
+      </div>
+    </div>
 
-  <div id="contentArea"></div>
+    <!-- Sub-tabs -->
+    <div class="nav-tabs" id="main-nav-tabs">
+      <button class="nav-tab-btn active" onclick="switchFloorTab('replenish')">🔄 تعويض المبيعات</button>
+      <button class="nav-tab-btn" onclick="switchFloorTab('newin')">🌟 وصل حديثاً / New In</button>
+      <button class="nav-tab-btn" id="tab-btn-admin" style="display:none;" onclick="switchFloorTab('admin')">⚙️ لوحة الإدارة الشاملة</button>
+    </div>
 
-  <script>
-    const API_BASE = "http://127.0.0.1:5000/api"; // عدّل هذا الرابط بعد رفع السيرفر
-    let currentSection = "Women";
+    <!-- Floor Staff Replenishment View -->
+    <div id="floor-view">
+      <div class="filter-bar">
+        <input type="text" id="live-search" class="search-input" placeholder="🔍 ابحث بالموديل، المقاس، اللون، أو الباركود..." oninput="renderFloorTasks()">
+        <select id="sort-select" class="form-control" style="width: auto;" onchange="renderFloorTasks()">
+          <option value="qty-desc">الأعلى مبيعاً وطلباً ⬇</option>
+          <option value="model-asc">ترتيب الموديل تصاعدياً</option>
+          <option value="model-desc">ترتيب الموديل تنازلياً</option>
+        </select>
+      </div>
 
-    function switchSection(sec) {
-      currentSection = sec;
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      event.target.classList.add('active');
-      loadData();
-    }
+      <div id="tasks-container">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
 
-    async function loadData() {
-      const container = document.getElementById('contentArea');
-      container.innerHTML = '<p style="text-align:center;">جاري التحميل...</p>';
-      
-      if (currentSection === "Admin") {
-        const res = await fetch(`${API_BASE}/report`);
-        const report = await res.json();
-        renderAdminReport(report);
-      } else {
-        const res = await fetch(`${API_BASE}/tasks?section=${currentSection}`);
-        const tasks = await res.json();
-        renderTasks(tasks.filter(t => t.status === 'pending'));
-      }
-    }
+    <!-- Admin Panel View -->
+    <div id="admin-view" style="display: none;">
+      <div class="nav-tabs" style="border-bottom-color: #475569;">
+        <button class="nav-tab-btn active" onclick="switchAdminTab('progress')">📊 إنجاز الأقسام</button>
+        <button class="nav-tab-btn" onclick="switchAdminTab('velocity')">🔥 حركة الموديلات والسرعة</button>
+        <button class="nav-tab-btn" onclick="switchAdminTab('staff')">👷 أداء الموظفين</button>
+        <button class="nav-tab-btn" onclick="switchAdminTab('data')">📁 رفع الشيتات والمزامنة</button>
+      </div>
 
-    function renderTasks(tasks) {
-      const container = document.getElementById('contentArea');
-      if (!tasks.length) {
-        container.innerHTML = '<p style="text-align:center; padding: 20px; color:#64748b;">لا توجد أصناف معلقة لهذا القسم حالياً 👍</p>';
-        return;
-      }
-      container.innerHTML = tasks.map(t => `
-        <div class="task-card" id="card-${t.id}">
-          <div class="task-header">
-            <div>
-              <div class="product-title">${t.product_name}</div>
-              <div class="barcode">باركود: ${t.barcode}</div>
+      <!-- Tab 1: Department Progress -->
+      <div id="admin-tab-progress">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="font-size:1rem;">متابعة إنجاز الأقسام الفعلي</h3>
+          <button class="btn btn-success btn-sm" onclick="sendWhatsappReport()">📱 تقرير واتساب للإدارة</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>القسم</th>
+                <th>المطلوب</th>
+                <th>المنجز ✅</th>
+                <th>المتخطي ❌</th>
+                <th>المتبقي</th>
+                <th>نسبة الإنجاز %</th>
+                <th>متوسط SLA</th>
+              </tr>
+            </thead>
+            <tbody id="progress-tbody"></tbody>
+            <tfoot id="progress-tfoot"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 2: Velocity & Model Sell-Through -->
+      <div id="admin-tab-velocity" style="display:none;">
+        <div class="filter-bar">
+          <select id="velocity-dept-filter" class="form-control" style="width:160px;" onchange="renderVelocityTable()">
+            <option value="ALL">جميع الأقسام</option>
+            <option value="Women">حريمي (Women)</option>
+            <option value="Men">رجالي (Men)</option>
+            <option value="Kids">أطفال (Kids)</option>
+            <option value="Accessories">إكسسوارات (Accessories)</option>
+          </select>
+          <select id="velocity-status-filter" class="form-control" style="width:160px;" onchange="renderVelocityTable()">
+            <option value="ALL">كل الحالات</option>
+            <option value="FAST">🔥 الأكثر مبيعاً (Sell-Through ≥ 40%)</option>
+            <option value="SLOW">❄️ حركة بطيئة (&lt; 40%)</option>
+            <option value="DEAD">🛑 راكد (مخزون بدون مبيعات)</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>الموديل واسم الصنف</th>
+                <th>القسم</th>
+                <th>إجمالي المبيعات</th>
+                <th>المخزون المتبقي</th>
+                <th>نسبة Sell-Through</th>
+                <th>مؤشر السرعة</th>
+              </tr>
+            </thead>
+            <tbody id="velocity-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 3: Staff Accountability -->
+      <div id="admin-tab-staff" style="display:none;">
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>اسم الموظف</th>
+                <th>القسم</th>
+                <th>القطع المنجزة ✅</th>
+                <th>القطع المتخطاة ❌</th>
+                <th>متوسط وقت المهمة</th>
+                <th>فترة الشفت النشط</th>
+              </tr>
+            </thead>
+            <tbody id="staff-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 4: Data Management & Sync Settings -->
+      <div id="admin-tab-data" style="display:none;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+          <!-- Dual File Upload Box -->
+          <div class="kpi-card" style="text-align: right;">
+            <h4 style="margin-bottom:12px; color:var(--accent);">📂 رفع الشيتات المعتمدة</h4>
+            <div class="form-group">
+              <label>1. شيت الأرصدة المفلتر (Pivot Inventory):</label>
+              <input type="file" id="file-pivot" class="form-control" accept=".xlsx, .xls">
             </div>
-            <span class="badge">الوقت: ${t.timestamp}</span>
+            <div class="form-group">
+              <label>2. شيت المبيعات اليومي (Stock Movement / Sales):</label>
+              <input type="file" id="file-sales" class="form-control" accept=".xlsx, .xls">
+            </div>
+            <button class="btn btn-primary" style="width:100%;" onclick="processUploadedSheets()">⚡ معالجة الشيتات وبدء التشغيل</button>
           </div>
-          <div class="task-details">
-            <div>المطلوب للفلور: <strong>${t.qty_needed}</strong></div>
-            <div>المتبقي بالمخزن: <strong>${t.stock_available}</strong></div>
+
+          <!-- Multi-Device Sync Box -->
+          <div class="kpi-card" style="text-align: right;">
+            <h4 style="margin-bottom:12px; color:var(--gold);">📡 مزامنة هواتف الفرع</h4>
+            <div class="form-group">
+              <label>كود الفرع للمزامنة (Sync Code):</label>
+              <input type="text" id="sync-branch-code" class="form-control" value="2S-MIVIDA">
+            </div>
+            <button class="btn btn-warning" style="width:100%; margin-bottom:8px;" onclick="pushCloudSync()">📡 نشر وتحديث المهام لجميع هواتف الفرع الآن</button>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="exportSyncPackage()">📦 تصدير حزمة (.json)</button>
+              <label class="btn btn-ghost btn-sm" style="flex:1; cursor:pointer;">
+                📥 استيراد حزمة
+                <input type="file" style="display:none;" accept=".json" onchange="importSyncPackage(event)">
+              </label>
+            </div>
           </div>
-          <div class="actions">
-            <button class="btn-action btn-done" onclick="updateStatus('${t.id}', 'done')">✅ تم الإنزال</button>
-            <button class="btn-action btn-skip" onclick="updateStatus('${t.id}', 'skipped')">❌ غير متوفر</button>
+
+          <!-- Data Export & Cleanup -->
+          <div class="kpi-card" style="text-align: right;">
+            <h4 style="margin-bottom:12px; color:#4ade80;">📊 تقارير إكسيل والتنظيف</h4>
+            <button class="btn btn-success btn-sm" style="width:100%; margin-bottom:8px;" onclick="exportAuditExcel()">📥 تحميل تقرير العمليات بالكامل (Audit Log)</button>
+            <button class="btn btn-danger btn-sm" style="width:100%; margin-bottom:8px;" onclick="exportDiscrepanciesExcel()">⚠️ تحميل تقرير النواقص والديفوهات (Adjustment Out)</button>
+            <button class="btn btn-ghost btn-sm" style="width:100%; color:#f87171;" onclick="clearAllData()">🧹 تنظيف الكاش وإعادة ضبط المصنع</button>
           </div>
         </div>
-      `).join('');
-    }
+      </div>
+    </div>
+  </main>
 
-    async function updateStatus(taskId, status) {
-      await fetch(`${API_BASE}/tasks/${taskId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
+  <!-- Login & Role Auth Modal -->
+  <div class="modal-overlay" id="auth-modal" style="display:flex;">
+    <div class="modal-content">
+      <h3 style="margin-bottom:14px;">تسجيل دخول فريق العمل</h3>
+      <div class="form-group">
+        <label>كود الفرع للمزامنة:</label>
+        <input type="text" id="auth-branch" class="form-control" placeholder="2S-MIVIDA" value="2S-MIVIDA">
+      </div>
+      <div class="form-group">
+        <label>القسم / الدور:</label>
+        <select id="auth-dept" class="form-control" onchange="handleDeptChange()">
+          <option value="Women">حريمي (Women)</option>
+          <option value="Men">رجالي (Men)</option>
+          <option value="Kids">أطفال (Kids)</option>
+          <option value="Accessories">إكسسوارات (Accessories)</option>
+          <option value="Admin">الإدارة (Admin)</option>
+        </select>
+      </div>
+      <div class="form-group" id="group-staff-name">
+        <label>اسم الموظف أو الكود الوظيفي (إلزامي):</label>
+        <input type="text" id="auth-staff-name" class="form-control" placeholder="أحمد محمود">
+      </div>
+      <div class="form-group">
+        <label>الرقم السري (PIN):</label>
+        <input type="password" id="auth-pin" class="form-control" placeholder="****">
+      </div>
+      <button class="btn btn-primary" style="width:100%;" onclick="submitAuth()">دخول النظام</button>
+    </div>
+  </div>
+
+  <!-- Skip Task Modal -->
+  <div class="modal-overlay" id="skip-modal" style="display:none;">
+    <div class="modal-content">
+      <h3 style="margin-bottom:12px; color:var(--danger);">تسجيل سبب التخطي / العجز</h3>
+      <div class="form-group">
+        <label>سبب عدم الإنزال:</label>
+        <select id="skip-reason" class="form-control">
+          <option value="غير متوفر بالستوك الداخلي">غير متوفر بالستوك الداخلي</option>
+          <option value="ديفوه تصنيع / تالف">ديفوه تصنيع / تالف</option>
+          <option value="متبقي قطعة عرض فقط">متبقي قطعة عرض فقط</option>
+          <option value="تحت الجرد والتسوية">تحت الجرد والتسوية</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ملاحظات إضافية:</label>
+        <input type="text" id="skip-notes" class="form-control" placeholder="اكتب ملاحظة إن وجدت...">
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-danger" style="flex:1;" onclick="confirmSkip()">تأكيد التخطي</button>
+        <button class="btn btn-ghost" style="flex:1;" onclick="closeSkipModal()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barcode Scanner Modal -->
+  <div class="modal-overlay" id="scanner-modal" style="display:none;">
+    <div class="modal-content" style="text-align:center;">
+      <h3 style="margin-bottom:12px;">📷 مسح باركود الصنف</h3>
+      <div id="scanner-container"></div>
+      <div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer;">
+          📁 التقاط صورة / اختيار ملف
+          <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="scanImageFallback(event)">
+        </label>
+        <button class="btn btn-danger btn-sm" onclick="closeScanner()">إغلاق الكاميرا</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Core Application Script -->
+  <script>
+    /* ==========================================================================
+       STORAGE & STATE MANAGER (IndexedDB)
+       ========================================================================== */
+    const DB_NAME = "2S_Homewear_DB";
+    const DB_VERSION = 1;
+    let dbInstance = null;
+
+    function initDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains("store")) {
+            db.createObjectStore("store");
+          }
+        };
+        req.onsuccess = (e) => {
+          dbInstance = e.target.result;
+          resolve(dbInstance);
+        };
+        req.onerror = (e) => reject(e);
       });
-      document.getElementById(`card-${taskId}`)?.remove();
     }
 
-    function renderAdminReport(report) {
-      const container = document.getElementById('contentArea');
-      let html = '<h3 style="margin-bottom:12px;">📊 تقرير التعويض اليومي</h3>';
-      for (const [sec, data] of Object.entries(report)) {
+    async function dbSet(key, val) {
+      if (!dbInstance) await initDB();
+      return new Promise((resolve, reject) => {
+        const tx = dbInstance.transaction("store", "readwrite");
+        tx.objectStore("store").put(val, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = (e) => reject(e);
+      });
+    }
+
+    async function dbGet(key) {
+      if (!dbInstance) await initDB();
+      return new Promise((resolve, reject) => {
+        const tx = dbInstance.transaction("store", "readonly");
+        const req = tx.objectStore("store").get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    // App State
+    let state = {
+      currentUser: { dept: "Women", staffName: "", role: "staff", branch: "2S-MIVIDA" },
+      activeFloorTab: "replenish",
+      tasks: [],          // Active variant tasks
+      seenCodes: {},      // First seen dates for New In
+      masterCatalog: {},  // Catalog extracted from Pivot
+      pendingSkipTaskId: null
+    };
+
+    const DEFAULT_PINS = { Admin: "9999", Women: "1234", Men: "1234", Kids: "1234", Accessories: "1234" };
+
+    /* ==========================================================================
+       INITIALIZATION & AUTHENTICATION
+       ========================================================================== */
+    window.addEventListener("DOMContentLoaded", async () => {
+      await initDB();
+      const savedTasks = await dbGet("tasks");
+      if (savedTasks) state.tasks = savedTasks;
+
+      const savedSeen = await dbGet("seen_codes");
+      if (savedSeen) state.seenCodes = savedSeen;
+
+      const savedBranch = await dbGet("branch_code");
+      if (savedBranch) {
+        state.currentUser.branch = savedBranch;
+        document.getElementById("auth-branch").value = savedBranch;
+        document.getElementById("sync-branch-code").value = savedBranch;
+      }
+
+      // Check if user session exists
+      const savedUser = sessionStorage.getItem("2s_user");
+      if (savedUser) {
+        state.currentUser = JSON.parse(savedUser);
+        document.getElementById("auth-modal").style.display = "none";
+        setupUserInterface();
+      }
+    });
+
+    function handleDeptChange() {
+      const dept = document.getElementById("auth-dept").value;
+      const staffGroup = document.getElementById("group-staff-name");
+      staffGroup.style.display = (dept === "Admin") ? "none" : "block";
+    }
+
+    async function submitAuth() {
+      const branch = document.getElementById("auth-branch").value.trim() || "2S-MIVIDA";
+      const dept = document.getElementById("auth-dept").value;
+      const pin = document.getElementById("auth-pin").value.trim();
+      const staffName = document.getElementById("auth-staff-name").value.trim();
+
+      const validPin = DEFAULT_PINS[dept] || "1234";
+      if (pin !== validPin) {
+        showToast("⚠️ كلمة المرور (PIN) غير صحيحة");
+        return;
+      }
+
+      if (dept !== "Admin" && !staffName) {
+        showToast("⚠️ يرجى إدخال اسم الموظف أولاً");
+        return;
+      }
+
+      state.currentUser = {
+        branch: branch,
+        dept: dept,
+        staffName: (dept === "Admin") ? "Admin" : staffName,
+        role: (dept === "Admin") ? "admin" : "staff"
+      };
+
+      sessionStorage.setItem("2s_user", JSON.stringify(state.currentUser));
+      await dbSet("branch_code", branch);
+
+      document.getElementById("auth-modal").style.display = "none";
+      setupUserInterface();
+
+      // Silent pull sync on login
+      pullCloudSync();
+    }
+
+    function openAuthModal() {
+      document.getElementById("auth-modal").style.display = "flex";
+    }
+
+    function setupUserInterface() {
+      const { dept, staffName, role } = state.currentUser;
+      const deptLabel = (dept === "Admin") ? "الإدارة العامة" : `${dept} - ${staffName}`;
+      document.getElementById("badge-dept").innerText = deptLabel;
+
+      if (role === "admin") {
+        document.getElementById("tab-btn-admin").style.display = "block";
+      } else {
+        document.getElementById("tab-btn-admin").style.display = "none";
+      }
+
+      renderKPIs();
+      renderFloorTasks();
+    }
+
+    /* ==========================================================================
+       SHEET PARSING & WORKFLOW INGESTION
+       ========================================================================== */
+    function mapDepartmentHierarchy(catString) {
+      const s = String(catString || "").toLowerCase();
+      if (s.includes("women") || s.includes("حريمي") || s.includes("حريمى")) return "Women";
+      if (s.includes("man") || s.includes("men") || s.includes("رجالي") || s.includes("رجالى")) return "Men";
+      if (s.includes("boy") || s.includes("boys") || s.includes("girl") || s.includes("girls") ||
+          s.includes("kid") || s.includes("kids") || s.includes("new born") || s.includes("أطفال") || 
+          s.includes("اطفال") || s.includes("اولاد") || s.includes("بنات")) {
+        return "Kids";
+      }
+      return "Accessories";
+    }
+
+    function parseVariantString(text) {
+      let barcode = "";
+      let rest = text.trim();
+      const codeMatch = rest.match(/^\s*\[(.*?)\]\s*(.*)$/);
+      if (codeMatch) {
+        barcode = codeMatch[1].trim();
+        rest = codeMatch[2].trim();
+      }
+
+      const parenMatch = rest.match(/\(([^)]+)\)\s*$/);
+      let color = "";
+      let size = "";
+      let prodName = rest;
+
+      if (parenMatch) {
+        prodName = rest.substring(0, parenMatch.index).trim();
+        const inside = parenMatch[1].trim();
+        if (inside.includes(",") || inside.includes("،")) {
+          const parts = inside.split(/[,،]/);
+          color = parts[0].trim();
+          size = parts[1] ? parts[1].trim() : "";
+        } else {
+          color = ""; // Strictly no color if comma is absent!
+          size = inside.trim();
+        }
+      }
+
+      return { barcode, prodName, color, size };
+    }
+
+    async function processUploadedSheets() {
+      const pivotFile = document.getElementById("file-pivot").files[0];
+      const salesFile = document.getElementById("file-sales").files[0];
+
+      if (!pivotFile || !salesFile) {
+        showToast("⚠️ يرجى اختيار كلا الملفين للمتابعة");
+        return;
+      }
+
+      showToast("⏳ جاري تحليل الشيتات وتطبيق القواعد...");
+
+      try {
+        // 1. Parse Pivot Sheet (Master Gatekeeper)
+        const pivotBuffer = await pivotFile.arrayBuffer();
+        const pivotWb = XLSX.read(pivotBuffer, { type: "array" });
+        const pivotSheet = pivotWb.Sheets[pivotWb.SheetNames[0]];
+        const pivotRows = XLSX.utils.sheet_to_json(pivotSheet, { header: 1 });
+
+        let currentCat = "";
+        let currentProdName = "";
+        let currentModelNo = "";
+        const pivotVariants = {};
+        const pivotModels = new Set();
+
+        for (let i = 0; i < pivotRows.length; i++) {
+          const row = pivotRows[i];
+          if (!row || row.length === 0) continue;
+          const val = String(row[0] || "").trim();
+          const qty = parseFloat(row[1]) || 0;
+
+          if (val.startsWith("All / Saleable") || val.startsWith("All/Saleable")) {
+            currentCat = val;
+            currentProdName = "";
+            currentModelNo = "";
+          } else if (val.startsWith("[") && val.includes("]")) {
+            const parsed = parseVariantString(val);
+            const dept = mapDepartmentHierarchy(currentCat);
+            const key = `${currentModelNo}_${parsed.size}_${parsed.color}`.toLowerCase();
+            
+            const variantObj = {
+              cat: currentCat,
+              dept: dept,
+              prodName: currentProdName || parsed.prodName,
+              modelNo: currentModelNo,
+              barcode: parsed.barcode,
+              color: parsed.color,
+              size: parsed.size,
+              stock: qty
+            };
+
+            pivotVariants[key] = variantObj;
+            if (parsed.barcode) pivotVariants[parsed.barcode] = variantObj;
+            if (currentModelNo) pivotModels.add(String(currentModelNo).trim());
+          } else if (val !== "nan" && val !== "Total" && !val.includes("MV/Mivida")) {
+            if (/^\d+$/.test(val) || (val.length <= 8 && /\d/.test(val))) {
+              currentModelNo = val;
+            } else {
+              currentProdName = val;
+            }
+          }
+        }
+
+        // 2. Parse Sales Sheet (Stock Movement)
+        const salesBuffer = await salesFile.arrayBuffer();
+        const salesWb = XLSX.read(salesBuffer, { type: "array" });
+        const salesSheet = salesWb.Sheets[salesWb.SheetNames[0]];
+        const salesRows = XLSX.utils.sheet_to_json(salesSheet);
+
+        const now = new Date().toISOString();
+        let addedCount = 0;
+
+        for (const row of salesRows) {
+          const netSold = parseFloat(row["Net Sold"]) || 0;
+          if (netSold <= 0) continue;
+
+          let modelNo = String(row["Model No"] || "").trim().replace(/\.0$/, "");
+          // Master Gatekeeper check
+          if (!pivotModels.has(modelNo)) {
+            continue; // Ignore models not in pivot inventory
+          }
+
+          const variantCode = String(row["Variant Code"] || "").trim();
+          const size = String(row["Size"] || "").trim();
+          const prodName = String(row["Product Name"] || "").trim();
+          const currentStock = (row["Current Stock"] !== undefined) ? (parseFloat(row["Current Stock"]) || 0) : null;
+
+          // Lookup in Pivot
+          let pivotMatch = pivotVariants[variantCode] || pivotVariants[`${modelNo}_${size}_`];
+          let dept = pivotMatch ? pivotMatch.dept : mapDepartmentHierarchy(prodName);
+          let color = pivotMatch ? pivotMatch.color : "";
+          let stock = (currentStock !== null) ? currentStock : (pivotMatch ? pivotMatch.stock : 0);
+
+          const taskKey = `${modelNo}_${size}_${color}`;
+          let existingTask = state.tasks.find(t => t.id === taskKey);
+
+          if (existingTask) {
+            const completedQty = existingTask.completedQty || 0;
+            const deltaNeeded = Math.max(0, netSold - completedQty);
+            if (deltaNeeded > 0) {
+              existingTask.qtyNeeded = deltaNeeded;
+              existingTask.netSold = netSold;
+              existingTask.stock = stock;
+              existingTask.status = "pending";
+              addedCount++;
+            }
+          } else {
+            state.tasks.push({
+              id: taskKey,
+              modelNo: modelNo,
+              prodName: prodName || (pivotMatch ? pivotMatch.prodName : "Unknown"),
+              size: size,
+              color: color,
+              barcode: variantCode || (pivotMatch ? pivotMatch.barcode : ""),
+              dept: dept,
+              qtyNeeded: netSold,
+              netSold: netSold,
+              completedQty: 0,
+              stock: stock,
+              status: "pending",
+              createdAt: now,
+              isNewIn: !state.seenCodes[modelNo]
+            });
+            state.seenCodes[modelNo] = now;
+            addedCount++;
+          }
+        }
+
+        await dbSet("tasks", state.tasks);
+        await dbSet("seen_codes", state.seenCodes);
+        showToast(`✅ اكتملت المعالجة بنجاح! تم تجهيز وتحديث المهام`);
+        renderFloorTasks();
+        renderKPIs();
+      } catch (err) {
+        console.error(err);
+        showToast("❌ حدث خطأ أثناء قراءة الملفات!");
+      }
+    }
+
+    /* ==========================================================================
+       FLOOR STAFF ACCORDION RENDERER
+       ========================================================================== */
+    function renderFloorTasks() {
+      const container = document.getElementById("tasks-container");
+      const searchVal = document.getElementById("live-search").value.trim().toLowerCase();
+      const sortVal = document.getElementById("sort-select").value;
+      const { dept, role } = state.currentUser;
+
+      // Filter tasks by Dept and Tab
+      let list = state.tasks.filter(t => {
+        if (role !== "admin" && t.dept !== dept) return false;
+        if (state.activeFloorTab === "newin" && !t.isNewIn) return false;
+        if (state.activeFloorTab === "replenish" && t.qtyNeeded <= 0 && t.status === "done") return false;
+        return true;
+      });
+
+      // Search filter
+      if (searchVal) {
+        list = list.filter(t => 
+          t.modelNo.toLowerCase().includes(searchVal) ||
+          t.prodName.toLowerCase().includes(searchVal) ||
+          t.size.toLowerCase().includes(searchVal) ||
+          t.color.toLowerCase().includes(searchVal) ||
+          (t.barcode && t.barcode.toLowerCase().includes(searchVal))
+        );
+      }
+
+      // Group by Model Key: ${modelNo}_${prodName.trim()}
+      const groups = {};
+      list.forEach(item => {
+        const key = `${item.modelNo}_${item.prodName.trim()}`;
+        if (!groups[key]) {
+          groups[key] = {
+            modelNo: item.modelNo,
+            prodName: item.prodName,
+            isNewIn: item.isNewIn,
+            variants: []
+          };
+        }
+        groups[key].variants.push(item);
+      });
+
+      let groupArray = Object.values(groups);
+
+      // Sorting
+      groupArray.sort((a, b) => {
+        if (sortVal === "qty-desc") {
+          const sumA = a.variants.reduce((s, v) => s + (v.qtyNeeded || 0), 0);
+          const sumB = b.variants.reduce((s, v) => s + (v.qtyNeeded || 0), 0);
+          return sumB - sumA;
+        } else if (sortVal === "model-asc") {
+          return a.modelNo.localeCompare(b.modelNo);
+        } else {
+          return b.modelNo.localeCompare(a.modelNo);
+        }
+      });
+
+      if (groupArray.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-muted);">لا توجد مهام مسجلة حالياً لهذا القسم</div>`;
+        return;
+      }
+
+      let html = "";
+      groupArray.forEach(group => {
+        const onlineSearchUrl = `https://www.2segypt.com/search?q=${group.modelNo}`;
+        const hasPending = group.variants.some(v => v.status === "pending");
+
         html += `
-          <div class="report-card">
-            <h4>قسم: ${sec}</h4>
-            <p>إجمالي المطلوب: <strong>${data.total_requested}</strong></p>
-            <p style="color:var(--success);">تم الإنزال: <strong>${data.completed}</strong></p>
-            <p style="color:var(--danger);">غير متوفر / تخطي: <strong>${data.skipped}</strong></p>
-            <p style="color:#d97706;">قيد الانتظار: <strong>${data.pending}</strong></p>
+          <div class="model-card">
+            <div class="model-header">
+              <div class="model-info">
+                <div class="model-title-wrap">
+                  <span class="model-name">${group.prodName}</span>
+                  <span class="model-badge">#${group.modelNo}</span>
+                  ${group.isNewIn ? '<span class="badge-newin">🌟 New In</span>' : ''}
+                </div>
+                <a href="${onlineSearchUrl}" target="_blank" class="model-link" onclick="event.stopPropagation();">
+                  🔗 عرض الصنف على موقع 2S أونلاين
+                </a>
+              </div>
+              <div>
+                ${hasPending ? `<button class="btn btn-success btn-sm" onclick="completeEntireModel('${group.modelNo}')">✅ إنزال الموديل بالكامل</button>` : '<span style="color:#4ade80; font-size:0.85rem; font-weight:700;">✅ مكتمل بالكامل</span>'}
+              </div>
+            </div>
+
+            <table class="variant-table">
+              <thead>
+                <tr>
+                  <th>المقاس</th>
+                  <th>اللون</th>
+                  <th>المطلوب رفعه</th>
+                  <th>المخزون المتاح</th>
+                  <th>الحالة / الإجراء</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${group.variants.map(v => `
+                  <tr>
+                    <td style="font-weight:700;">${v.size || "-"}</td>
+                    <td>${v.color ? `<span class="color-chip">${v.color}</span>` : "-"}</td>
+                    <td style="font-weight:800; font-size:1rem; color:var(--accent);">${v.qtyNeeded}</td>
+                    <td style="font-weight:700;">${v.stock}</td>
+                    <td>
+                      ${v.status === "pending" ? `
+                        <button class="btn btn-success btn-sm" onclick="markTaskDone('${v.id}')">✅ إنزال</button>
+                        <button class="btn btn-danger btn-sm" onclick="openSkipModal('${v.id}')">❌ تخطي</button>
+                      ` : v.status === "done" ? `
+                        <span style="color:#4ade80; font-weight:700;">✅ تم الإنزال</span>
+                      ` : `
+                        <span style="color:#f87171; font-weight:700;" title="${v.skipReason || ''}">❌ ${v.skipReason || 'تم التخطي'}</span>
+                      `}
+                    </td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
           </div>
         `;
-      }
+      });
+
       container.innerHTML = html;
     }
 
-    async function syncSales() {
-      const res = await fetch(`${API_BASE}/sync-sales`, { method: 'POST' });
-      const data = await res.json();
-      alert(`تم التحديث بنجاح! الأصناف المطلوب تعويضها: ${data.count}`);
-      loadData();
+    /* ==========================================================================
+       TASK ACTIONS & SLA TRACKING
+       ========================================================================== */
+    async function markTaskDone(taskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      const now = new Date();
+      const created = new Date(task.createdAt);
+      const slaMinutes = Math.max(1, Math.round((now - created) / 60000));
+
+      task.completedQty = (task.completedQty || 0) + task.qtyNeeded;
+      task.qtyNeeded = 0;
+      task.status = "done";
+      task.resolvedAt = now.toISOString();
+      task.slaMinutes = slaMinutes;
+      task.staffName = state.currentUser.staffName;
+
+      await dbSet("tasks", state.tasks);
+      renderFloorTasks();
+      renderKPIs();
+      showToast("✅ تم تسجيل إنزال الصنف بنجاح");
     }
 
-    // التحميل المبدئي
-    loadData();
+    async function completeEntireModel(modelNo) {
+      const now = new Date();
+      state.tasks.forEach(t => {
+        if (t.modelNo === modelNo && t.status === "pending") {
+          const created = new Date(t.createdAt);
+          t.completedQty = (t.completedQty || 0) + t.qtyNeeded;
+          t.qtyNeeded = 0;
+          t.status = "done";
+          t.resolvedAt = now.toISOString();
+          t.slaMinutes = Math.max(1, Math.round((now - created) / 60000));
+          t.staffName = state.currentUser.staffName;
+        }
+      });
+
+      await dbSet("tasks", state.tasks);
+      renderFloorTasks();
+      renderKPIs();
+      showToast(`✅ تم إنزال جميع مقاسات الموديل #${modelNo}`);
+    }
+
+    function openSkipModal(taskId) {
+      state.pendingSkipTaskId = taskId;
+      document.getElementById("skip-modal").style.display = "flex";
+    }
+
+    function closeSkipModal() {
+      state.pendingSkipTaskId = null;
+      document.getElementById("skip-modal").style.display = "none";
+    }
+
+    async function confirmSkip() {
+      const taskId = state.pendingSkipTaskId;
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      const reason = document.getElementById("skip-reason").value;
+      const notes = document.getElementById("skip-notes").value.trim();
+
+      const now = new Date();
+      const created = new Date(task.createdAt);
+
+      task.status = "skipped";
+      task.skipReason = reason;
+      task.skipNotes = notes;
+      task.resolvedAt = now.toISOString();
+      task.slaMinutes = Math.max(1, Math.round((now - created) / 60000));
+      task.staffName = state.currentUser.staffName;
+
+      await dbSet("tasks", state.tasks);
+      closeSkipModal();
+      renderFloorTasks();
+      renderKPIs();
+      showToast("❌ تم تسجيل سبب التخطي لحفظ النواقص");
+    }
+
+    /* ==========================================================================
+       KPIS & ADMIN METRICS
+       ========================================================================== */
+    function renderKPIs() {
+      const { dept, role } = state.currentUser;
+      const list = (role === "admin") ? state.tasks : state.tasks.filter(t => t.dept === dept);
+
+      let req = 0, done = 0, skip = 0, pend = 0, slaSum = 0, slaCount = 0;
+
+      list.forEach(t => {
+        req += (t.netSold || t.qtyNeeded || 0);
+        if (t.status === "done") {
+          done += (t.completedQty || 1);
+          if (t.slaMinutes) { slaSum += t.slaMinutes; slaCount++; }
+        } else if (t.status === "skipped") {
+          skip += 1;
+          if (t.slaMinutes) { slaSum += t.slaMinutes; slaCount++; }
+        } else {
+          pend += (t.qtyNeeded || 1);
+        }
+      });
+
+      document.getElementById("kpi-req").innerText = req;
+      document.getElementById("kpi-done").innerText = done;
+      document.getElementById("kpi-skip").innerText = skip;
+      document.getElementById("kpi-pend").innerText = pend;
+      document.getElementById("kpi-sla").innerText = slaCount ? `${Math.round(slaSum / slaCount)} دقيقة` : "0 دقيقة";
+    }
+
+    function switchFloorTab(tab) {
+      state.activeFloorTab = tab;
+      const tabs = document.querySelectorAll("#main-nav-tabs .nav-tab-btn");
+      tabs.forEach(b => b.classList.remove("active"));
+      event.target.classList.add("active");
+
+      if (tab === "admin") {
+        document.getElementById("floor-view").style.display = "none";
+        document.getElementById("admin-view").style.display = "block";
+        renderDepartmentProgress();
+      } else {
+        document.getElementById("floor-view").style.display = "block";
+        document.getElementById("admin-view").style.display = "none";
+        renderFloorTasks();
+      }
+    }
+
+    function switchAdminTab(tabName) {
+      document.querySelectorAll("#admin-view .nav-tabs .nav-tab-btn").forEach(b => b.classList.remove("active"));
+      event.target.classList.add("active");
+
+      document.getElementById("admin-tab-progress").style.display = (tabName === "progress") ? "block" : "none";
+      document.getElementById("admin-tab-velocity").style.display = (tabName === "velocity") ? "block" : "none";
+      document.getElementById("admin-tab-staff").style.display = (tabName === "staff") ? "block" : "none";
+      document.getElementById("admin-tab-data").style.display = (tabName === "data") ? "block" : "none";
+
+      if (tabName === "progress") renderDepartmentProgress();
+      if (tabName === "velocity") renderVelocityTable();
+      if (tabName === "staff") renderStaffTable();
+    }
+
+    function renderDepartmentProgress() {
+      const depts = ["Women", "Men", "Kids", "Accessories"];
+      const tbody = document.getElementById("progress-tbody");
+      const tfoot = document.getElementById("progress-tfoot");
+
+      let totalReq = 0, totalDone = 0, totalSkip = 0, totalPend = 0, totalSlaSum = 0, totalSlaCount = 0;
+      let rowsHtml = "";
+
+      depts.forEach(d => {
+        const dTasks = state.tasks.filter(t => t.dept === d);
+        let req = 0, done = 0, skip = 0, pend = 0, slaSum = 0, slaCount = 0;
+
+        dTasks.forEach(t => {
+          req += (t.netSold || t.qtyNeeded || 0);
+          if (t.status === "done") {
+            done += (t.completedQty || 1);
+            if (t.slaMinutes) { slaSum += t.slaMinutes; slaCount++; }
+          } else if (t.status === "skipped") {
+            skip += 1;
+            if (t.slaMinutes) { slaSum += t.slaMinutes; slaCount++; }
+          } else {
+            pend += (t.qtyNeeded || 1);
+          }
+        });
+
+        totalReq += req;
+        totalDone += done;
+        totalSkip += skip;
+        totalPend += pend;
+        totalSlaSum += slaSum;
+        totalSlaCount += slaCount;
+
+        const rate = req > 0 ? Math.round((done / req) * 100) : 0;
+        const avgSla = slaCount > 0 ? `${Math.round(slaSum / slaCount)} دقيقة` : "-";
+
+        rowsHtml += `
+          <tr>
+            <td style="font-weight:700;">${d}</td>
+            <td>${req}</td>
+            <td style="color:#4ade80;">${done}</td>
+            <td style="color:#f87171;">${skip}</td>
+            <td style="color:#fbbf24;">${pend}</td>
+            <td><strong>${rate}%</strong></td>
+            <td>${avgSla}</td>
+          </tr>
+        `;
+      });
+
+      const totalRate = totalReq > 0 ? Math.round((totalDone / totalReq) * 100) : 0;
+      const overallAvgSla = totalSlaCount > 0 ? `${Math.round(totalSlaSum / totalSlaCount)} دقيقة` : "-";
+
+      tbody.innerHTML = rowsHtml;
+      tfoot.innerHTML = `
+        <tr>
+          <td>الإجمالي الكلي</td>
+          <td>${totalReq}</td>
+          <td style="color:#4ade80;">${totalDone}</td>
+          <td style="color:#f87171;">${totalSkip}</td>
+          <td style="color:#fbbf24;">${totalPend}</td>
+          <td><strong>${totalRate}%</strong></td>
+          <td>${overallAvgSla}</td>
+        </tr>
+      `;
+    }
+
+    function renderVelocityTable() {
+      const deptFilter = document.getElementById("velocity-dept-filter").value;
+      const statusFilter = document.getElementById("velocity-status-filter").value;
+      const tbody = document.getElementById("velocity-tbody");
+
+      // Aggregate strictly by Key = Model_No + "_" + Product_Name.trim()
+      const modelsMap = {};
+      state.tasks.forEach(t => {
+        const key = `${t.modelNo}_${t.prodName.trim()}`;
+        if (!modelsMap[key]) {
+          modelsMap[key] = {
+            modelNo: t.modelNo,
+            prodName: t.prodName,
+            dept: t.dept,
+            totalSold: 0,
+            stock: 0
+          };
+        }
+        modelsMap[key].totalSold += (t.netSold || 0);
+        modelsMap[key].stock += (t.stock || 0);
+      });
+
+      let list = Object.values(modelsMap);
+
+      if (deptFilter !== "ALL") list = list.filter(m => m.dept === deptFilter);
+
+      let rowsHtml = "";
+      list.forEach(m => {
+        const totalUnits = m.totalSold + m.stock;
+        const sellThrough = totalUnits > 0 ? (m.totalSold / totalUnits) * 100 : 0;
+
+        let statusBadge = "";
+        let statusKey = "";
+
+        if (sellThrough >= 40) {
+          statusBadge = '<span style="color:#f59e0b; font-weight:700;">🔥 الأكثر مبيعاً (Fast)</span>';
+          statusKey = "FAST";
+        } else if (sellThrough > 0) {
+          statusBadge = '<span style="color:#38bdf8; font-weight:700;">❄️ بطيء (Slow)</span>';
+          statusKey = "SLOW";
+        } else {
+          statusBadge = '<span style="color:#f87171; font-weight:700;">🛑 راكد (Dead Stock)</span>';
+          statusKey = "DEAD";
+        }
+
+        if (statusFilter !== "ALL" && statusFilter !== statusKey) return;
+
+        rowsHtml += `
+          <tr>
+            <td>
+              <div style="font-weight:700;">${m.prodName}</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">#${m.modelNo}</div>
+            </td>
+            <td>${m.dept}</td>
+            <td style="font-weight:700; color:var(--accent);">${m.totalSold}</td>
+            <td>${m.stock}</td>
+            <td style="font-weight:800;">${sellThrough.toFixed(1)}%</td>
+            <td>${statusBadge}</td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = rowsHtml || `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">لا توجد نتائج مطابقة</td></tr>`;
+    }
+
+    function renderStaffTable() {
+      const tbody = document.getElementById("staff-tbody");
+      const staffMap = {};
+
+      state.tasks.forEach(t => {
+        if (!t.staffName) return;
+        if (!staffMap[t.staffName]) {
+          staffMap[t.staffName] = {
+            name: t.staffName,
+            dept: t.dept,
+            done: 0,
+            skipped: 0,
+            slaSum: 0,
+            slaCount: 0,
+            firstAction: t.resolvedAt,
+            lastAction: t.resolvedAt
+          };
+        }
+        const s = staffMap[t.staffName];
+        if (t.status === "done") s.done += (t.completedQty || 1);
+        if (t.status === "skipped") s.skipped += 1;
+        if (t.slaMinutes) { s.slaSum += t.slaMinutes; s.slaCount++; }
+
+        if (t.resolvedAt) {
+          if (!s.firstAction || new Date(t.resolvedAt) < new Date(s.firstAction)) s.firstAction = t.resolvedAt;
+          if (!s.lastAction || new Date(t.resolvedAt) > new Date(s.lastAction)) s.lastAction = t.resolvedAt;
+        }
+      });
+
+      const list = Object.values(staffMap);
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">لم يتم تسجيل أي عمليات للموظفين بعد</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map(s => {
+        const avgSpeed = s.slaCount > 0 ? `${Math.round(s.slaSum / s.slaCount)} دقيقة` : "-";
+        const first = s.firstAction ? new Date(s.firstAction).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'}) : "-";
+        const last = s.lastAction ? new Date(s.lastAction).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'}) : "-";
+
+        return `
+          <tr>
+            <td style="font-weight:700;">${s.name}</td>
+            <td>${s.dept}</td>
+            <td style="color:#4ade80; font-weight:700;">${s.done}</td>
+            <td style="color:#f87171; font-weight:700;">${s.skipped}</td>
+            <td>${avgSpeed}</td>
+            <td style="font-size:0.75rem;">${first} ⬅ ${last}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    /* ==========================================================================
+       MULTI-DEVICE CLOUD SYNC & EXPORTS
+       ========================================================================== */
+    async function pushCloudSync() {
+      const branch = document.getElementById("sync-branch-code").value.trim() || state.currentUser.branch;
+      showToast("📡 جاري نشر وتحديث المهام للسحابة...");
+
+      try {
+        const payload = {
+          branch: branch,
+          updatedAt: new Date().toISOString(),
+          tasks: state.tasks,
+          seenCodes: state.seenCodes
+        };
+
+        const res = await fetch(`https://jsonblob.com/api/jsonBlob/${encodeURIComponent(branch)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          showToast("✅ تم نشر المهام بنجاح! يمكن لجميع الهواتف المزامنة الآن");
+        } else {
+          // Fallback create
+          await fetch(`https://jsonblob.com/api/jsonBlob`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Request-Id": branch },
+            body: JSON.stringify(payload)
+          });
+          showToast("✅ تم إنشاء غرفة المزامنة ونشر المهام!");
+        }
+      } catch (err) {
+        console.error(err);
+        showToast("⚠️ فشل الاتصال بالسحابة! يرجى استخدام تصدير الحزمة يدوياً");
+      }
+    }
+
+    async function pullCloudSync() {
+      const branch = state.currentUser.branch || "2S-MIVIDA";
+      showToast("🔄 جاري مزامنة المهام...");
+
+      try {
+        const res = await fetch(`https://jsonblob.com/api/jsonBlob/${encodeURIComponent(branch)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.tasks) {
+            state.tasks = data.tasks;
+            state.seenCodes = data.seenCodes || {};
+            await dbSet("tasks", state.tasks);
+            await dbSet("seen_codes", state.seenCodes);
+            renderFloorTasks();
+            renderKPIs();
+            showToast("✅ تمت المزامنة وتحديث البيانات بنجاح!");
+          }
+        } else {
+          showToast("ℹ️ لا توجد بيانات جديدة بالسحابة");
+        }
+      } catch (err) {
+        console.warn("Pull sync fallback:", err);
+      }
+    }
+
+    function exportSyncPackage() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+        branch: state.currentUser.branch,
+        tasks: state.tasks,
+        seenCodes: state.seenCodes
+      }));
+      const dlAnchor = document.createElement("a");
+      dlAnchor.setAttribute("href", dataStr);
+      dlAnchor.setAttribute("download", `2S_Sync_${state.currentUser.branch}_${new Date().toISOString().slice(0,10)}.json`);
+      dlAnchor.click();
+    }
+
+    function importSyncPackage(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const pkg = JSON.parse(e.target.result);
+          if (pkg.tasks) {
+            state.tasks = pkg.tasks;
+            state.seenCodes = pkg.seenCodes || {};
+            await dbSet("tasks", state.tasks);
+            await dbSet("seen_codes", state.seenCodes);
+            renderFloorTasks();
+            renderKPIs();
+            showToast("✅ تم استيراد حزمة المزامنة بنجاح!");
+          }
+        } catch (err) {
+          showToast("❌ ملف المزامنة غير صالح");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function sendWhatsappReport() {
+      let msg = `*تقرير إنجاز تعويض الستوك - 2S Homewear*\n`;
+      msg += `الفرع: ${state.currentUser.branch}\n`;
+      msg += `التاريخ: ${new Date().toLocaleDateString('ar-EG')}\n\n`;
+
+      const depts = ["Women", "Men", "Kids", "Accessories"];
+      depts.forEach(d => {
+        const dTasks = state.tasks.filter(t => t.dept === d);
+        let req = 0, done = 0;
+        dTasks.forEach(t => {
+          req += (t.netSold || t.qtyNeeded || 0);
+          if (t.status === "done") done += (t.completedQty || 1);
+        });
+        const rate = req > 0 ? Math.round((done / req) * 100) : 0;
+        msg += `▪️ *${d}*: مطلوب (${req}) | أنجز (${done}) | نسبة: ${rate}%\n`;
+      });
+
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    function exportAuditExcel() {
+      const data = state.tasks.map(t => ({
+        "الموديل": t.modelNo,
+        "اسم المنتج": t.prodName,
+        "المقاس": t.size,
+        "اللون": t.color || "-",
+        "الباركود": t.barcode || "-",
+        "القسم": t.dept,
+        "الكمية المطلوبة": t.netSold || t.qtyNeeded,
+        "المنجز": t.completedQty || 0,
+        "الحالة": t.status === "done" ? "منجز" : t.status === "skipped" ? "متخطي" : "معلق",
+        "الموظف": t.staffName || "-",
+        "وقت الإنجاز (دقيقة)": t.slaMinutes || "-",
+        "سبب التخطي": t.skipReason || "-",
+        "الملاحظات": t.skipNotes || "-",
+        "تاريخ الإنشاء": t.createdAt || "-"
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Audit Log");
+      XLSX.writeFile(wb, `2S_Audit_Log_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+    function exportDiscrepanciesExcel() {
+      const discrepancies = state.tasks.filter(t => t.status === "skipped").map(t => ({
+        "Model No": t.modelNo,
+        "Product Name": t.prodName,
+        "Size": t.size,
+        "Color": t.color || "-",
+        "Barcode": t.barcode || "-",
+        "Department": t.dept,
+        "Missing Qty (Adjustment Out)": t.qtyNeeded || 1,
+        "Discrepancy Reason": t.skipReason || "غير متوفر بالستوك",
+        "Staff Notes": t.skipNotes || "-",
+        "Logged By Staff": t.staffName || "-",
+        "Logged At": t.resolvedAt || "-"
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(discrepancies);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Adjustments");
+      XLSX.writeFile(wb, `2S_Defects_Discrepancies_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+    async function clearAllData() {
+      if (confirm("⚠️ هل أنت متأكد من تنظيف كافة البيانات والكاش وإعادة ضبط المصنع؟")) {
+        await dbSet("tasks", []);
+        await dbSet("seen_codes", {});
+        state.tasks = [];
+        state.seenCodes = {};
+        sessionStorage.clear();
+        location.reload();
+      }
+    }
+
+    /* ==========================================================================
+       BARCODE SCANNER (DUAL-MODE)
+       ========================================================================== */
+    let html5QrScanner = null;
+
+    function openScanner() {
+      document.getElementById("scanner-modal").style.display = "flex";
+      html5QrScanner = new Html5Qrcode("scanner-container");
+      html5QrScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          handleScannedBarcode(decodedText);
+          closeScanner();
+        },
+        (error) => { /* ignore frame errors */ }
+      ).catch(err => {
+        console.warn("Camera start failed, use fallback file input", err);
+      });
+    }
+
+    function closeScanner() {
+      if (html5QrScanner) {
+        html5QrScanner.stop().then(() => {
+          html5QrScanner.clear();
+          html5QrScanner = null;
+        }).catch(() => {});
+      }
+      document.getElementById("scanner-modal").style.display = "none";
+    }
+
+    function scanImageFallback(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const scanner = new Html5Qrcode("scanner-container");
+      scanner.scanFile(file, true)
+        .then(decodedText => {
+          handleScannedBarcode(decodedText);
+          closeScanner();
+        })
+        .catch(err => {
+          showToast("❌ تعذر التعرف على الباركود من الصورة");
+        });
+    }
+
+    function handleScannedBarcode(code) {
+      document.getElementById("live-search").value = code;
+      renderFloorTasks();
+      showToast(`🔍 تم العثور على الصنف: ${code}`);
+    }
+
+    function showToast(msg) {
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.innerText = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
   </script>
 </body>
 </html>
